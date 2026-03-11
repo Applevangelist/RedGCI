@@ -10,8 +10,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # ─────────────────────────────────────────────────────────────
 
-option(BUILD_TESTS     “Build unit tests”         ON)
-option(BUILD_SERVER    “Build UDP server (EXE)”   ON)
+option(BUILD_TESTS     “Build unit tests”         ON)  
+option(BUILD_SERVER    “Build UDP server (EXE)”   ON)  
 
 # ─────────────────────────────────────────────────────────────
 
