@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Dependencies
         run: sudo apt-get install -y cmake gcc
@@ -50,7 +50,7 @@ jobs:
     needs: test-linux   # Erst testen, dann bauen
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure (MSVC)
         run: |
@@ -90,7 +90,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Windows-Artifact aus dem build-windows Job holen
       - name: Download Windows artifact
