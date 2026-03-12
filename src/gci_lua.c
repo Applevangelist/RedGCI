@@ -424,11 +424,11 @@ static const luaL_Reg gci_funcs[] = {
 extern "C" {
 #endif
 
-#ifdef _WIN32
+/* #ifdef _WIN32 */
 __declspec(dllexport)
-#else
+/* #else
 __attribute__((visibility("default")))
-#endif
+#endif */
 int luaopen_RedGCI(lua_State *L) {
     ensure_init();
 
