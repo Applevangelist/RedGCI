@@ -70,7 +70,7 @@ if(BUILD_DLL)
             src/gci_lua.c
         )
         set_target_properties(gci_dll PROPERTIES
-            OUTPUT_NAME         "gci_core"
+            OUTPUT_NAME         "RedGCI"
             PREFIX              ""
             ARCHIVE_OUTPUT_NAME "gci_dll"
         )
