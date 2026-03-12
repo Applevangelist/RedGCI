@@ -60,7 +60,7 @@ static void ensure_init(void) {
     if (g_initialized) return;
     for (int i = 0; i < GCI_MAX_CONTEXTS; i++) {
         gci_context_init(&g_ctx[i]);
-        merge_context_init(&g_merge[i]);
+        gci_merge_context_init(&g_merge[i]);
     }
     g_initialized = true;
 }
@@ -312,7 +312,7 @@ static int l_fsm_reset(lua_State *L) {
 
     int id = (int)luaL_checkinteger(L, 1);
     gci_context_init(ctx);
-    merge_context_init(&g_merge[id - 1]);
+    gci_merge_context_init(&g_merge[id - 1]);
     return 0;
 }
 
@@ -338,32 +338,50 @@ static int l_merge_update(lua_State *L) {
     MergeContext *mctx = get_merge_ctx(L, 1);
     if (!mctx) return 0;
 
-    const char *callsign   = luaL_checkstring(L, 2);
-    float rel_bearing      = GETF(L, 3);
-    float range            = GETF(L, 4);
-    float altitude_delta   = GETF(L, 5);
-    bool  splash           = lua_toboolean(L, 6) != 0;
+    const char *callsign  = luaL_checkstring(L, 2);
+    float rel_bearing     = GETF(L, 3);
+    float range           = GETF(L, 4);
+    float altitude_delta  = GETF(L, 5);
+    bool  splash          = lua_toboolean(L, 6) != 0;
 
-    MergeTransmission mtx;
-    merge_update(mctx, callsign, rel_bearing, range, altitude_delta,
-                 splash, &mtx);
+    /* Kontext aktualisieren */
+    MergeContext prev = *mctx;
+    mctx->bearing_to_target = rel_bearing;
+    mctx->range             = range;
+    mctx->altitude_delta    = altitude_delta;
+
+    if (splash) {
+        mctx->phase = MERGE_SPLASH;
+    } else {
+        MergePhase new_phase = gci_merge_transition(mctx, &prev);
+        if (new_phase != mctx->phase) {
+            mctx->phase         = new_phase;
+            mctx->ticks_in_phase = 0;
+        } else {
+            mctx->ticks_in_phase++;
+        }
+    }
+
+    /* Transmission bauen */
+    GCITransmission tx;
+    gci_build_merge_transmission(mctx, &prev, callsign, &tx);
 
     /* Phase als String */
     const char *phase_str = "ENTRY";
     switch (mctx->phase) {
-        case MERGE_ENTRY:     phase_str = "ENTRY";     break;
-        case MERGE_OVERSHOOT: phase_str = "OVERSHOOT"; break;
-        case MERGE_SEPARATION:phase_str = "SEPARATION";break;
-        case MERGE_REATTACK:  phase_str = "REATTACK";  break;
-        case MERGE_LOST:      phase_str = "LOST";      break;
-        case MERGE_SPLASH:    phase_str = "SPLASH";    break;
-        default:              phase_str = "UNKNOWN";   break;
+        case MERGE_ENTRY:      phase_str = "ENTRY";      break;
+        case MERGE_OVERSHOOT:  phase_str = "OVERSHOOT";  break;
+        case MERGE_SEPARATION: phase_str = "SEPARATION"; break;
+        case MERGE_REATTACK:   phase_str = "REATTACK";   break;
+        case MERGE_LOST:       phase_str = "LOST";       break;
+        case MERGE_SPLASH:     phase_str = "SPLASH";     break;
+        default:               phase_str = "UNKNOWN";    break;
     }
 
     lua_pushstring(L,  phase_str);
-    lua_pushstring(L,  mtx.text_ru);
-    lua_pushstring(L,  mtx.text_en);
-    lua_pushboolean(L, mtx.silence ? 1 : 0);
+    lua_pushstring(L,  tx.text_ru);
+    lua_pushstring(L,  tx.text_en);
+    lua_pushboolean(L, tx.silence ? 1 : 0);
     return 4;
 }
 
