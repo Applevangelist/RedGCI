@@ -26,6 +26,13 @@ add_library(gci_core STATIC
     src/message_handler.c
 )
 target_include_directories(gci_core PUBLIC include)
+if(MSVC)
+    target_compile_options(gci_core PRIVATE
+        /MT        # ← NEU: muss zur DLL passen
+        /O2
+        /W3
+    )
+endif()
 if(NOT MSVC)
     target_link_libraries(gci_core m)
 endif()
