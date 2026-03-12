@@ -114,6 +114,26 @@ function splash_handler:onEvent(event)
 end
 world.addEventHandler(splash_handler)
 
+-- Timer alle 1s prüfen ob neue Transmission vorliegt
+local function GCI_display_tick()
+    if GCI_last_transmission then
+        local tx = GCI_last_transmission
+        GCI_last_transmission = nil  -- konsumieren
+
+        trigger.action.outTextForCoalition(
+            coalition.side.RED,
+            tx.text,
+            8)
+
+        if tx.wf then
+            trigger.action.outSoundForCoalition(
+                coalition.side.RED, "warning.ogg")
+        end
+    end
+    return timer.getTime() + 1.0  -- nächster Check in 1s
+end
+
+timer.scheduleFunction(GCI_display_tick, nil, timer.getTime() + 2.0)
 
 -- ──────────────────────────────────────────────────────────────
 --  Init
