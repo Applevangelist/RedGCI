@@ -415,9 +415,9 @@ static const luaL_Reg gci_funcs[] = {
 
 
 /* ─────────────────────────────────────────────────────────────
- *  luaopen_gci — Entry Point
- *  DCS ruft require("gci_core") auf → luaopen_gci wird aufgerufen
- *  Analog zu HoundTTS: luaL_register + extern "C" __declspec(dllexport)
+ *  luaopen_RedGCI — Entry Point
+ *  DCS ruft require("RedGCI") auf → luaopen_RedGCI wird aufgerufen
+ *  Lua-Konvention: require("X") sucht luaopen_X in X.dll
  * ───────────────────────────────────────────────────────────── */
 
 #ifdef __cplusplus
@@ -433,7 +433,7 @@ int luaopen_RedGCI(lua_State *L) {
     ensure_init();
 
     /* Als Tabelle "gci" registrieren — analog zu luaL_register in HoundTTS */
-    luaL_register(L, "gci", gci_funcs);
+    luaL_register(L, "RedGCI", gci_funcs);
 
     /* Zusätzlich alle Funktionen global verfügbar machen —
      * gci_bridge.lua ruft gci_compute_intercept() direkt auf, nicht gci.gci_compute_intercept() */
