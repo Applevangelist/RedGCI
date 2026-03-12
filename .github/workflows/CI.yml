@@ -174,7 +174,13 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Release version: $VERSION"
 
-       - name: Download DLL artifact
+      - name: Download Windows artifact      
+        uses: actions/download-artifact@v7
+        with:
+          name: gci_server-windows-${{ github.sha }}
+          path: release/
+
+      - name: Download DLL artifact
         uses: actions/download-artifact@v7
         with:
           name: gci_dll-windows-${{ github.sha }}
@@ -185,7 +191,7 @@ jobs:
           mkdir -p release/lua
           cp lua/*.lua release/lua/
           cd release
-          zip -r ../gci_poc-${{ steps.version.outputs.version }}-windows.zip  .
+          zip -r ../gci_poc-${{ steps.version.outputs.version }}-windows.zip .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
