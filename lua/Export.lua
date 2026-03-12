@@ -191,6 +191,24 @@ local function GCI_tick()
     if now - last_tick < GCI.config.tick_interval then return end
     last_tick = now
 
+    -- DEBUG TEMPORÄR: alle Gruppen loggen
+    local objects = LoGetWorldObjects()
+    if not objects then
+        GCI_log("GCI: LoGetWorldObjects() returned nil")
+        return
+    end
+    local count = 0
+    local groups_seen = {}
+    for _, obj in pairs(objects) do
+        if obj and obj.GroupName and not groups_seen[obj.GroupName] then
+            groups_seen[obj.GroupName] = true
+            GCI_log("GCI: Gruppe sichtbar: '" .. obj.GroupName .. "'")
+            count = count + 1
+        end
+    end
+    GCI_log("GCI: Tick ausgeführt, " .. count .. " Gruppen gefunden")
+    -- DEBUG ENDE
+  
     -- Einheiten finden
     local fighter_unit = find_unit_in_group(GCI.config.fighter_group)
     local target_unit  = find_unit_in_group(GCI.config.target_group)
