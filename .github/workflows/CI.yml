@@ -97,6 +97,32 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Generate lua51.lib from DCS lua51.dll
+        shell: pwsh
+        run: |
+          $msvcRoot = 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC'
+          $version  = (Get-ChildItem $msvcRoot | Sort-Object Name -Descending | Select-Object -First 1).Name
+          $binDir   = "$msvcRoot\$version\bin\Hostx64\x64"
+          $dumpbin  = "$binDir\dumpbin.exe"
+          $lib      = "$binDir\lib.exe"
+
+          Write-Host "Using MSVC $version"
+
+          $dll = "${{ github.workspace }}\third_party\lua51\lua51.dll"
+          Set-Location "${{ github.workspace }}\third_party\lua51"
+
+          $raw   = & $dumpbin /exports $dll
+          $names = $raw | Where-Object { $_ -match '^\s+\d+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+(\S+)' } |
+                          ForEach-Object { $Matches[1] }
+          if (-not $names) { throw 'No exports found in lua51.dll' }
+
+          @('LIBRARY lua51', 'EXPORTS') + $names | Set-Content -Encoding ASCII lua51.def
+          Write-Host "lua51.def written with $($names.Count) exports"
+
+          & $lib /def:lua51.def /out:lua51.lib /machine:x64
+          if ($LASTEXITCODE -ne 0) { throw "lib.exe failed" }
+          Write-Host 'lua51.lib generated successfully'
+
       - name: Configure (MSVC)
         run: |
           cmake -B build `
