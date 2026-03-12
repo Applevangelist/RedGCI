@@ -67,13 +67,13 @@ end
 --  Unit-Finder (sucht erste lebende Einheit einer Gruppe)
 -- ──────────────────────────────────────────────────────────────
 
+
 local function find_unit_in_group(group_name)
-    local grp = Group.getByName(group_name)
-    if not grp then return nil end
-    local units = grp:getUnits()
-    for _, u in ipairs(units) do
-        if u and u:isExist() and u:isActive() then
-            return u
+    local objects = LoGetWorldObjects()
+    if not objects then return nil end
+    for _, obj in pairs(objects) do
+        if obj and obj.GroupName == group_name then
+            return obj
         end
     end
     return nil
@@ -84,20 +84,21 @@ end
 --  Rohdaten aus DCS-Einheit extrahieren
 -- ──────────────────────────────────────────────────────────────
 
-local function get_aircraft_data(unit)
-    if not unit then return nil end
-    local p = unit:getPoint()
-    local v = unit:getVelocity()
-    local spd = math.sqrt(v.x^2 + v.z^2)
+local function get_aircraft_data(obj)
+    if not obj then return nil end
+    if not obj.x or not obj.z then return nil end  -- Sicherheitscheck
+    local vx  = obj.vx or 0
+    local vz  = obj.vz or 0
+    local spd = math.sqrt(vx^2 + vz^2)
     return {
-        x    = p.x,
-        z    = p.z,
-        y    = p.y,
+        x    = obj.x,
+        z    = obj.z,
+        y    = obj.y or 0,
         spd  = spd,
-        vx   = v.x,
-        vz   = v.z,
-        vy   = v.y,
-        fuel = unit:getFuel(),
+        vx   = vx,
+        vz   = vz,
+        vy   = obj.vy or 0,
+        fuel = obj.fuel or 1.0,  -- Fallback 100% wenn nil
     }
 end
 
