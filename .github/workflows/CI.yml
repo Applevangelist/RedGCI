@@ -85,7 +85,59 @@ jobs:
             build/gci_bridge.lua
             build/test_mission.lua
           retention-days: 30
+          
+  # ──────────────────────────────────────────────────────────────
+  #  Windows DLL Build (Phase 2)
+  # ──────────────────────────────────────────────────────────────
+  build-windows-dll:
+    name: Build Windows DLL
+    runs-on: windows-latest
+    needs: test-linux
 
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download Lua 5.1 headers + import lib
+        shell: pwsh
+        run: |
+          # Lua 5.1.5 Binaries von luabinaries.sourceforge.net
+          $url = "https://sourceforge.net/projects/luabinaries/files/5.1.5/Windows%20Libraries/Dynamic/lua-5.1.5_Win64_dll17_lib.zip/download"
+          Invoke-WebRequest -Uri $url -OutFile lua51.zip
+          Expand-Archive lua51.zip -DestinationPath lua51_pkg
+
+          # Headers von lua.org
+          $src = "https://www.lua.org/ftp/lua-5.1.5.tar.gz"
+          Invoke-WebRequest -Uri $src -OutFile lua515.tar.gz
+          tar -xzf lua515.tar.gz
+
+          # Verzeichnisstruktur die CMake erwartet
+          New-Item -ItemType Directory -Force -Path lua51/include
+          Copy-Item lua515/lua-5.1.5/src/lua.h     lua51/include/
+          Copy-Item lua515/lua-5.1.5/src/luaconf.h lua51/include/
+          Copy-Item lua515/lua-5.1.5/src/lualib.h  lua51/include/
+          Copy-Item lua515/lua-5.1.5/src/lauxlib.h lua51/include/
+          Copy-Item lua51_pkg/lua51.lib             lua51/
+
+      - name: Configure (MSVC)
+        run: |
+          cmake -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_SERVER=OFF `
+            -DBUILD_TESTS=OFF `
+            -DBUILD_DLL=ON `
+            -DLUA51_LIB="${{ github.workspace }}/lua51/lua51.lib" `
+            -DLUA51_INCLUDE="${{ github.workspace }}/lua51/include"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Upload gci_core.dll
+        uses: actions/upload-artifact@v6
+        with:
+          name: gci_dll-windows-${{ github.sha }}
+          path: build/Release/gci_core.dll
+          retention-days: 30
+          
   # ──────────────────────────────────────────────────────────────
   #  Release
   #  Wird ausgeführt wenn:
@@ -122,10 +174,10 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Release version: $VERSION"
 
-      - name: Download Windows artifact
+       - name: Download DLL artifact
         uses: actions/download-artifact@v7
         with:
-          name: gci_server-windows-${{ github.sha }}
+          name: gci_dll-windows-${{ github.sha }}
           path: release/
 
       - name: Prepare release package
@@ -133,7 +185,7 @@ jobs:
           mkdir -p release/lua
           cp lua/*.lua release/lua/
           cd release
-          zip -r ../gci_poc-${{ steps.version.outputs.version }}-windows.zip .
+          zip -r ../gci_poc-${{ steps.version.outputs.version }}-windows.zip  .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
