@@ -48,50 +48,44 @@ endif()
 
 # ── Lua DLL (Phase 2) ─────────────────────────────────────────
 if(BUILD_DLL)
-    # Lua 5.1 suchen — DCS-Pfad als Hint
-    find_library(LUA51_LIB
-        NAMES lua51 lua5.1 lua-5.1
-        HINTS
-            "$ENV{DCS_SDK}/lua51"
-            "C:/Program Files/Eagle Dynamics/DCS World/bin"
-            "C:/Program Files (x86)/Eagle Dynamics/DCS World/bin"
-            ${CMAKE_SOURCE_DIR}/lua51
-    )
-    find_path(LUA51_INCLUDE
-        NAMES lua.h
-        HINTS
-            "$ENV{DCS_SDK}/lua51/include"
-            ${CMAKE_SOURCE_DIR}/lua51/include
-            ${CMAKE_SOURCE_DIR}/third_party/lua51
+    # Lua 5.1 als imported target — analog zu HoundTTS
+    add_library(lua51_imported SHARED IMPORTED)
+    set_target_properties(lua51_imported PROPERTIES
+        IMPORTED_LOCATION "${LUA51_LIB}/../lua51.dll"
+        IMPORTED_IMPLIB   "${LUA51_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${LUA51_INCLUDE}"
     )
 
-    if(LUA51_LIB AND LUA51_INCLUDE)
-        add_library(gci_dll SHARED
-            src/gci_lua.c
+    add_library(gci_dll SHARED
+        src/gci_lua.c
+    )
+    set_target_properties(gci_dll PROPERTIES
+        OUTPUT_NAME "gci_core"
+        PREFIX      ""
+        ARCHIVE_OUTPUT_NAME "gci_dll"
+    )
+    target_include_directories(gci_dll PRIVATE
+        include
+        ${LUA51_INCLUDE}
+    )
+    target_compile_definitions(gci_dll PRIVATE
+        LUA_BUILD_AS_DLL    # ← Lua-Symbole als dllimport
+    )
+    target_link_libraries(gci_dll PRIVATE
+        gci_core
+        lua51_imported      # ← imported target statt rohe lib
+    )
+    if(MSVC)
+        target_compile_options(gci_dll PRIVATE
+            /MT
+            /O2
+            /W3
         )
-        set_target_properties(gci_dll PROPERTIES
-            OUTPUT_NAME "gci_core"      # → gci_core.dll
-            PREFIX      ""              # kein lib-Prefix auf Linux
-            ARCHIVE_OUTPUT_NAME "gci_dll"   # ← Importlib heißt gci_dll.lib, kein Konflikt
+        target_link_options(gci_dll PRIVATE
+            /NODEFAULTLIB:MSVCRT
+            /NODEFAULTLIB:MSVCRTD
         )
-        target_include_directories(gci_dll PRIVATE
-            include
-            ${LUA51_INCLUDE}
-        )
-        target_link_libraries(gci_dll
-            gci_core
-            ${LUA51_LIB}
-        )
-        if(MSVC)
-            target_compile_options(gci_dll PRIVATE
-                /MT        # ← NEU: statische CRT
-                /O2
-                /W3
-            )
-            target_link_options(gci_dll PRIVATE
-                /NODEFAULTLIB:MSVCRT    # ← NEU: keine dynamische CRT
-            )
-        endif()
+    endif()
         if(NOT MSVC)
             target_link_libraries(gci_dll m)
         endif()
