@@ -140,7 +140,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: gci_dll-windows-${{ github.sha }}
-          path: build/Release/gci_core.dll
+          path: build/Release/RedGCI.dll
           retention-days: 30
           
   # ──────────────────────────────────────────────────────────────
