@@ -1,3 +1,16 @@
+-- Data export script for DCS, version 1.2.
+-- Copyright (C) 2006-2014, Eagle Dynamics.
+-- See http://www.lua.org for Lua script system info 
+-- We recommend to use the LuaSocket addon (http://www.tecgraf.puc-rio.br/luasocket) 
+-- to use standard network protocols in Lua scripts.
+-- LuaSocket 2.0 files (*.dll and *.lua) are supplied in the Scripts/LuaSocket folder
+-- and in the installation folder of the DCS. 
+-- Expand the functionality of following functions for your external application needs.
+-- Look into Saved Games\DCS\Logs\dcs.log for this script errors, please.
+local Tacviewlfs=require('lfs');dofile(Tacviewlfs.writedir()..'Scripts/TacviewGameExport.lua')
+
+pcall(function() local dcsSr=require('lfs');dofile(dcsSr.writedir()..[[Mods\Services\DCS-SRS\Scripts\DCS-SimpleRadioStandalone.lua]]); end,nil)
+
 --[[
   GCI POC — Export.lua
   ═══════════════════════════════════════════════════════════════
@@ -25,7 +38,7 @@ GCI.config = {
     coalition     = 1,          -- 0=Neutral, 1=RED, 2=BLUE
     subtitle_time = 8,          -- Sekunden Untertitel sichtbar
     debug         = true,       -- Debug-Log in dcs.log
-    fighter_group = "Сокол",    -- Gruppenname des Jägers in der Mission
+    fighter_group = "Mig-29A",    -- Gruppenname des Jägers in der Mission
     target_group  = "Target",   -- Gruppenname des Ziels
 }
 
@@ -84,21 +97,35 @@ end
 --  Rohdaten aus DCS-Einheit extrahieren
 -- ──────────────────────────────────────────────────────────────
 
-local function get_aircraft_data(obj)
+-- Letzte bekannte Positionen für Velocity-Berechnung
+local last_positions = {}
+local last_pos_time  = 0
+
+local function get_aircraft_data(obj, now)
     if not obj then return nil end
-    if not obj.x or not obj.z then return nil end  -- Sicherheitscheck
-    local vx  = obj.vx or 0
-    local vz  = obj.vz or 0
+    local pos = obj.Position
+    if not pos or not pos.x then return nil end
+
+    local key = obj.UnitName or obj.GroupName
+    local vx, vy, vz = 0, 0, 0
+
+    local last = last_positions[key]
+    if last and (now - last.t) > 0.01 then
+        local dt = now - last.t
+        vx = (pos.x - last.x) / dt
+        vy = (pos.y - last.y) / dt
+        vz = (pos.z - last.z) / dt
+    end
+
+    -- Position für nächsten Tick speichern
+    last_positions[key] = { x=pos.x, y=pos.y, z=pos.z, t=now }
+
     local spd = math.sqrt(vx^2 + vz^2)
     return {
-        x    = obj.x,
-        z    = obj.z,
-        y    = obj.y or 0,
-        spd  = spd,
-        vx   = vx,
-        vz   = vz,
-        vy   = obj.vy or 0,
-        fuel = obj.fuel or 1.0,  -- Fallback 100% wenn nil
+        x   = pos.x, z = pos.z, y = pos.y,
+        spd = spd,
+        vx  = vx,    vz = vz,   vy = vy,
+        fuel = obj.fuel or 1.0,
     }
 end
 
@@ -106,6 +133,9 @@ end
 -- ──────────────────────────────────────────────────────────────
 --  GCI-Antwort parsen und anzeigen
 -- ──────────────────────────────────────────────────────────────
+
+-- Globale Variable als Kommunikationskanal zur Bridge
+GCI_last_transmission = nil
 
 local function parse_and_display(resp)
     if not resp or resp == "SILENCE" then return end
@@ -115,33 +145,18 @@ local function parse_and_display(resp)
     end
     if resp:sub(1, 2) == "OK" then return end
 
-    -- Russischen Text extrahieren
-    local ru = resp:match("RU:([^|]+)")
-    local en = resp:match("EN:([^|]+)")
+    local ru    = resp:match("RU:([^|]+)")
     local state = resp:match("STATE:([^|]+)")
     local hdg   = resp:match("HDG:([^|]+)")
     local wf    = resp:match("WF:([^|]+)")
 
     if ru then
-        -- Primär: russischer Text als Untertitel
-        trigger.action.outTextForCoalition(
-            GCI.config.coalition,
-            "[GCI] " .. ru,
-            GCI.config.subtitle_time)
-
+        GCI_last_transmission = {
+            text = "[GCI] " .. ru,
+            wf   = (wf == "1"),
+        }
         GCI_log(string.format("GCI [%s] HDG:%s WF:%s → %s",
                 state or "?", hdg or "?", wf or "?", ru))
-    end
-
-    -- Optional: englische Übersetzung als zweite Zeile
-    if en and GCI.config.debug then
-        GCI_log("GCI_EN: " .. en)
-    end
-
-    -- Waffenfreigabe visuell hervorheben
-    if wf == "1" then
-        trigger.action.outSoundForCoalition(
-            GCI.config.coalition, "warning.ogg")  -- falls vorhanden
     end
 end
 
@@ -191,23 +206,6 @@ local function GCI_tick()
     if now - last_tick < GCI.config.tick_interval then return end
     last_tick = now
 
-    -- DEBUG TEMPORÄR: alle Gruppen loggen
-    local objects = LoGetWorldObjects()
-    if not objects then
-        GCI_log("GCI: LoGetWorldObjects() returned nil")
-        return
-    end
-    local count = 0
-    local groups_seen = {}
-    for _, obj in pairs(objects) do
-        if obj and obj.GroupName and not groups_seen[obj.GroupName] then
-            groups_seen[obj.GroupName] = true
-            GCI_log("GCI: Gruppe sichtbar: '" .. obj.GroupName .. "'")
-            count = count + 1
-        end
-    end
-    GCI_log("GCI: Tick ausgeführt, " .. count .. " Gruppen gefunden")
-    -- DEBUG ENDE
   
     -- Einheiten finden
     local fighter_unit = find_unit_in_group(GCI.config.fighter_group)
@@ -224,13 +222,14 @@ local function GCI_tick()
         return
     end
 
-    local f = get_aircraft_data(fighter_unit)
-    local t = get_aircraft_data(target_unit)
+    local f = get_aircraft_data(fighter_unit, now)
+    local t = get_aircraft_data(target_unit, now)
     if not f or not t then return end
 
     -- Sprit senden
     udp:send(string.format("FUEL|f1|%.3f", f.fuel))
-    udp:receive()  -- OK wegwerfen
+    local fuel_resp = udp:receive()
+    --GCI_log("GCI: FUEL Antwort: '" .. tostring(fuel_resp) .. "'")
 
     -- Intercept berechnen lassen
     local msg = string.format(
@@ -241,6 +240,7 @@ local function GCI_tick()
 
     udp:send(msg)
     local resp = udp:receive()
+    --GCI_log("GCI: Server Antwort: '" .. tostring(resp) .. "'")  -- ← NEU
     parse_and_display(resp)
 end
 
