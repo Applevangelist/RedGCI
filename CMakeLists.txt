@@ -47,6 +47,10 @@ if(BUILD_SERVER)
 endif()
 
 # ── Lua DLL (Phase 2) ─────────────────────────────────────────
+if(BUILD_DLL AND NOT WIN32)
+    message(STATUS "  DLL      : OFF (nur Windows)")
+    set(BUILD_DLL OFF)
+endif()
 if(BUILD_DLL)
     if(NOT LUA51_LIB OR NOT LUA51_INCLUDE)
         message(WARNING
@@ -122,7 +126,9 @@ endif()
 # ── Lua-Dateien ins Build-Verzeichnis ─────────────────────────
 configure_file(lua/Export.lua        ${CMAKE_BINARY_DIR}/Export.lua        COPYONLY)
 configure_file(lua/gci_bridge.lua    ${CMAKE_BINARY_DIR}/gci_bridge.lua    COPYONLY)
-configure_file(lua/gci_mission.lua   ${CMAKE_BINARY_DIR}/gci_mission.lua   COPYONLY)
+if(EXISTS "${CMAKE_SOURCE_DIR}/lua/gci_mission.lua")
+    configure_file(lua/gci_mission.lua  ${CMAKE_BINARY_DIR}/gci_mission.lua  COPYONLY)
+endif()
 configure_file(lua/test_mission.lua  ${CMAKE_BINARY_DIR}/test_mission.lua  COPYONLY)
 
 message(STATUS "========================================")
