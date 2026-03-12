@@ -75,6 +75,16 @@ if(BUILD_DLL)
             gci_core
             ${LUA51_LIB}
         )
+        if(MSVC)
+            target_compile_options(gci_dll PRIVATE
+                /MT        # ← NEU: statische CRT
+                /O2
+                /W3
+            )
+            target_link_options(gci_dll PRIVATE
+                /NODEFAULTLIB:MSVCRT    # ← NEU: keine dynamische CRT
+            )
+        endif()
         if(NOT MSVC)
             target_link_libraries(gci_dll m)
         endif()
