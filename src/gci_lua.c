@@ -432,20 +432,21 @@ __declspec(dllexport)
 __attribute__((visibility("default")))
 #endif */
 int luaopen_RedGCI(lua_State *L) {
-    ensure_init();
 
     /* Als Tabelle "gci" registrieren — analog zu luaL_register in HoundTTS */
     luaL_register(L, "RedGCI", gci_funcs);
 
     /* Zusätzlich alle Funktionen global verfügbar machen —
-     * gci_bridge.lua ruft gci_compute_intercept() direkt auf, nicht gci.gci_compute_intercept() */
+     * gci_bridge.lua ruft gci_compute_intercept() direkt auf, nicht gci.gci_compute_intercept()
     const luaL_Reg *f = gci_funcs;
     while (f->name) {
-        lua_getfield(L, -1, f->name);   /* hole Funktion aus der Tabelle */
-        lua_setglobal(L, f->name);      /* setze als global */
+        lua_getfield(L, -1, f->name);   /* hole Funktion aus der Tabelle
+        lua_setglobal(L, f->name);      /* setze als global
         f++;
-    }
+    } */
 
+    ensure_init();
+    
     /* Tabelle auf Stack lassen — Lua erwartet 1 Rückgabewert */
     return 1;
 }
