@@ -22,6 +22,10 @@
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2012 Lua.org, PUC-Rio"
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
+#if defined(LUA_BUILD_AS_DLL)
+#  define LUA_API __declspec(dllimport)  // für lua Funktionen
+#  define LUALIB_API __declspec(dllexport)  // für unsere Exports!
+#endif
 
 /* mark for precompiled code (`<esc>Lua') */
 #define	LUA_SIGNATURE	"\033Lua"
