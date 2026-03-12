@@ -68,6 +68,7 @@ RedGCI.DEBUG          = RedGCI.DEBUG          or false
 --  DLL laden via package.cpath + require
 --  Analog zu HoundTTS-mission.lua
 -- ──────────────────────────────────────────────────────────────
+
 do
     local dllPath = lfs.writedir() .. [[Mods\Services\RedGCI\bin\]]
     if not string.find(package.cpath, dllPath, 1, true) then
@@ -75,14 +76,25 @@ do
     end
 end
 
-local ok, _gci = pcall(require, "gci_core")
+local ok, _gci = pcall(require, "RedGCI")
 if not ok then
-    env.error("[RedGCI] gci_core.dll konnte nicht geladen werden: " .. tostring(_gci))
-    return
+    env.error("[RedGCI] Fehler: " .. tostring(_gci))
+    -- Zusätzlich: prüfe ob luaopen_gci überhaupt existiert
+	local ok2, fn = pcall(package.loadlib, 
+        lfs.writedir() .. [[Mods\Services\RedGCI\bin\RedGCI.dll]], 
+        "luaopen_RedGCI")
+    env.error("[RedGCI] loadlib: ok=" .. tostring(ok2) .. " fn=" .. tostring(fn))
+    
+    -- Alle DLL-Ladefehler sehen
+    local ok3, err3 = pcall(package.loadlib,
+        lfs.writedir() .. [[Mods\Services\RedGCI\bin\RedGCI.dll]],
+        "*")   -- * = alle Exports laden
+    env.error("[RedGCI] loadlib *: ok=" .. tostring(ok3) .. " err=" .. tostring(err3))
+	return
 end
 
 -- gci_version() ist jetzt global (registriert von luaopen_gci)
-env.info("[RedGCI] " .. gci_version() .. " geladen")
+env.info("[RedGCI] " .. _gci.gci_version() .. " geladen")
 
 -- ──────────────────────────────────────────────────────────────
 --  RedGCI öffentliche API
@@ -102,7 +114,7 @@ function RedGCI.getCtxId(callsign)
         end
         RedGCI._ctx_map[callsign] = RedGCI._ctx_next
         RedGCI._ctx_next = RedGCI._ctx_next + 1
-        gci_fsm_reset(RedGCI._ctx_map[callsign])
+        _gci.gci_fsm_reset(RedGCI._ctx_map[callsign])
         env.info("[RedGCI] Neuer Kontext " .. RedGCI._ctx_map[callsign] ..
                  " für " .. callsign)
     end
@@ -112,7 +124,7 @@ end
 function RedGCI.releaseCtx(callsign)
     local id = RedGCI._ctx_map[callsign]
     if id then
-        gci_fsm_reset(id)
+        _gci.gci_fsm_reset(id)
         RedGCI._ctx_map[callsign] = nil
         env.info("[RedGCI] Kontext " .. id .. " freigegeben (" .. callsign .. ")")
     end
@@ -120,7 +132,7 @@ end
 
 -- Wrapper: Intercept berechnen
 function RedGCI.computeIntercept(fighter, target)
-    return gci_compute_intercept(
+    return _gci.gci_compute_intercept(
         fighter.x,   fighter.z,   fighter.y,   fighter.spd,
         fighter.vx,  fighter.vz,  fighter.vy,
         target.x,    target.z,    target.y,    target.spd,
@@ -132,7 +144,7 @@ function RedGCI.fsmUpdate(callsign, range, aspect, closure, alt_delta, fuel,
                            pilot_radar, pilot_visual, threat)
     local id = RedGCI.getCtxId(callsign)
     if not id then return nil, nil end
-    return gci_fsm_update(id, range, aspect, closure, alt_delta, fuel,
+    return _gci.gci_fsm_update(id, range, aspect, closure, alt_delta, fuel,
                            pilot_radar or false,
                            pilot_visual or false,
                            threat or false)
@@ -142,7 +154,7 @@ end
 function RedGCI.buildTransmission(callsign, hdg, tti, mode, wf, ip_x, ip_z, ip_y)
     local id = RedGCI.getCtxId(callsign)
     if not id then return true, "", "", false, 3.0 end
-    return gci_fsm_transmission(id, callsign, hdg, tti, mode, wf,
+    return _gci.gci_fsm_transmission(id, callsign, hdg, tti, mode, wf,
                                  ip_x or 0, ip_z or 0, ip_y or 0)
 end
 
@@ -150,7 +162,7 @@ end
 function RedGCI.mergeUpdate(callsign, rel_bearing, range, alt_delta, splash)
     local id = RedGCI.getCtxId(callsign)
     if not id then return "ENTRY", "", "", true end
-    return gci_merge_update(id, callsign, rel_bearing, range, alt_delta,
+    return _gci.gci_merge_update(id, callsign, rel_bearing, range, alt_delta,
                              splash or false)
 end
 
