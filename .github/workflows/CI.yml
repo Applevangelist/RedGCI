@@ -5,8 +5,20 @@ on:
     branches: [ "main", "develop" ]
   pull_request:
     branches: [ "main" ]
+  # Manueller Trigger: Actions-Tab → "Run workflow"
+  # Dort kann man Version und ob ein GitHub Release erstellt wird angeben
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release-Version (z.B. v0.2.0) — leer lassen für reinen Build"
+        required: false
+        default: ""
+      create_release:
+        description: "GitHub Release erstellen?"
+        required: true
+        type: boolean
+        default: false
 
-# Nur einen gleichzeitigen Build pro Branch/PR
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -14,8 +26,7 @@ concurrency:
 jobs:
 
   # ──────────────────────────────────────────────────────────────
-  #  Tests auf Linux (schnell, kein Cross-Compile nötig)
-  #  Läuft bei jedem Push — Gating-Job für die anderen
+  #  Tests auf Linux
   # ──────────────────────────────────────────────────────────────
   test-linux:
     name: Tests (Linux)
@@ -41,13 +52,12 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   # ──────────────────────────────────────────────────────────────
-  #  Windows Build (nativer gci_server.exe mit ws2_32)
-  #  Nur auf main/develop — DAS ist das eigentliche Ziel-Binary
+  #  Windows Build
   # ──────────────────────────────────────────────────────────────
   build-windows:
     name: Build Windows EXE
     runs-on: windows-latest
-    needs: test-linux   # Erst testen, dann bauen
+    needs: test-linux
 
     steps:
       - uses: actions/checkout@v5
@@ -66,7 +76,7 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Upload gci_server.exe
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gci_server-windows-${{ github.sha }}
           path: |
@@ -77,14 +87,18 @@ jobs:
           retention-days: 30
 
   # ──────────────────────────────────────────────────────────────
-  #  Release: Erstellt einen GitHub Release mit dem Windows-Binary
-  #  Nur bei Tags wie v1.0.0
+  #  Release
+  #  Wird ausgeführt wenn:
+  #    a) Tag wie v1.0.0 gepusht wird  (automatisch)
+  #    b) workflow_dispatch mit create_release=true  (manuell)
   # ──────────────────────────────────────────────────────────────
   release:
     name: Release
     runs-on: ubuntu-latest
     needs: [ test-linux, build-windows ]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
 
     permissions:
       contents: write
@@ -92,27 +106,43 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Windows-Artifact aus dem build-windows Job holen
+      # Version ermitteln: Tag-Name oder manuell eingegebene Version
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            # Fallback wenn leer: SHA-Kurzform
+            if [ -z "$VERSION" ]; then
+              VERSION="dev-$(echo ${{ github.sha }} | cut -c1-7)"
+            fi
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
+
       - name: Download Windows artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: gci_server-windows-${{ github.sha }}
           path: release/
 
-      # Lua-Dateien dazulegen
       - name: Prepare release package
         run: |
           mkdir -p release/lua
           cp lua/*.lua release/lua/
           cd release
-          zip -r ../gci_poc-${{ github.ref_name }}-windows.zip .
+          zip -r ../gci_poc-${{ steps.version.outputs.version }}-windows.zip .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: gci_poc-${{ github.ref_name }}-windows.zip
+          tag_name: ${{ steps.version.outputs.version }}
+          name: GCI POC ${{ steps.version.outputs.version }}
+          files: gci_poc-${{ steps.version.outputs.version }}-windows.zip
           body: |
-            ## GCI POC ${{ github.ref_name }}
+            ## GCI POC ${{ steps.version.outputs.version }}
 
             ### Installation
             1. `gci_server.exe` starten
@@ -126,4 +156,4 @@ jobs:
             - `lua/gci_bridge.lua` — Mission Script (F10 Menü)
             - `lua/test_mission.lua` — Standalone Test
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') || contains(steps.version.outputs.version, 'dev') }}
