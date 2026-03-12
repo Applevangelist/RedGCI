@@ -28,7 +28,7 @@ add_library(gci_core STATIC
 target_include_directories(gci_core PUBLIC include)
 if(MSVC)
     target_compile_options(gci_core PRIVATE
-        /MT        # ← NEU: muss zur DLL passen
+        /MT
         /O2
         /W3
     )
@@ -48,49 +48,54 @@ endif()
 
 # ── Lua DLL (Phase 2) ─────────────────────────────────────────
 if(BUILD_DLL)
-    # Lua 5.1 als imported target — analog zu HoundTTS
-    add_library(lua51_imported SHARED IMPORTED)
-    set_target_properties(lua51_imported PROPERTIES
-        IMPORTED_LOCATION "${LUA51_LIB}/../lua51.dll"
-        IMPORTED_IMPLIB   "${LUA51_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${LUA51_INCLUDE}"
-    )
+    if(NOT LUA51_LIB OR NOT LUA51_INCLUDE)
+        message(WARNING
+            "  BUILD_DLL=ON aber LUA51_LIB oder LUA51_INCLUDE nicht gesetzt.\n"
+            "  Setze: -DLUA51_LIB=<pfad/lua51.lib> -DLUA51_INCLUDE=<pfad/include>")
+        set(BUILD_DLL OFF)
+    else()
+        # Lua 5.1 als imported target — analog zu HoundTTS
+        add_library(lua51_imported SHARED IMPORTED)
+        set_target_properties(lua51_imported PROPERTIES
+            IMPORTED_LOCATION "${LUA51_LIB}/../lua51.dll"
+            IMPORTED_IMPLIB   "${LUA51_LIB}"
+            INTERFACE_INCLUDE_DIRECTORIES "${LUA51_INCLUDE}"
+        )
 
-    add_library(gci_dll SHARED
-        src/gci_lua.c
-    )
-    set_target_properties(gci_dll PROPERTIES
-        OUTPUT_NAME "gci_core"
-        PREFIX      ""
-        ARCHIVE_OUTPUT_NAME "gci_dll"
-    )
-    target_include_directories(gci_dll PRIVATE
-        include
-        ${LUA51_INCLUDE}
-    )
-    target_compile_definitions(gci_dll PRIVATE
-        LUA_BUILD_AS_DLL    # ← Lua-Symbole als dllimport
-    )
-    target_link_libraries(gci_dll PRIVATE
-        gci_core
-        lua51_imported      # ← imported target statt rohe lib
-    )
-    if(MSVC)
-        target_compile_options(gci_dll PRIVATE
-            /MT
-            /O2
-            /W3
+        add_library(gci_dll SHARED
+            src/gci_lua.c
         )
-        target_link_options(gci_dll PRIVATE
-            /NODEFAULTLIB:MSVCRT
-            /NODEFAULTLIB:MSVCRTD
+        set_target_properties(gci_dll PROPERTIES
+            OUTPUT_NAME         "gci_core"
+            PREFIX              ""
+            ARCHIVE_OUTPUT_NAME "gci_dll"
         )
-    endif()
+        target_include_directories(gci_dll PRIVATE
+            include
+            ${LUA51_INCLUDE}
+        )
+        target_compile_definitions(gci_dll PRIVATE
+            LUA_BUILD_AS_DLL
+        )
+        target_link_libraries(gci_dll PRIVATE
+            gci_core
+            lua51_imported
+        )
+        if(MSVC)
+            target_compile_options(gci_dll PRIVATE
+                /MT
+                /O2
+                /W3
+            )
+            target_link_options(gci_dll PRIVATE
+                /NODEFAULTLIB:MSVCRT
+                /NODEFAULTLIB:MSVCRTD
+            )
+        endif()
         if(NOT MSVC)
-            target_link_libraries(gci_dll m)
+            target_link_libraries(gci_dll PRIVATE m)
         endif()
 
-        # DLL nach Build-Verzeichnis kopieren
         add_custom_command(TARGET gci_dll POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
                 $<TARGET_FILE:gci_dll>
@@ -100,12 +105,6 @@ if(BUILD_DLL)
 
         message(STATUS "  Lua 5.1  : ${LUA51_LIB}")
         message(STATUS "  DLL      : ON")
-    else()
-        message(WARNING
-            "  Lua 5.1 nicht gefunden — BUILD_DLL deaktiviert.\n"
-            "  Lösung A: lua51.lib + lua.h nach ${CMAKE_SOURCE_DIR}/lua51/\n"
-            "  Lösung B: cmake -DLUA51_LIB=<pfad> -DLUA51_INCLUDE=<pfad>")
-        set(BUILD_DLL OFF)
     endif()
 endif()
 
@@ -121,9 +120,10 @@ if(BUILD_TESTS)
 endif()
 
 # ── Lua-Dateien ins Build-Verzeichnis ─────────────────────────
-configure_file(lua/Export.lua       ${CMAKE_BINARY_DIR}/Export.lua       COPYONLY)
-configure_file(lua/gci_bridge.lua   ${CMAKE_BINARY_DIR}/gci_bridge.lua   COPYONLY)
-configure_file(lua/test_mission.lua ${CMAKE_BINARY_DIR}/test_mission.lua COPYONLY)
+configure_file(lua/Export.lua        ${CMAKE_BINARY_DIR}/Export.lua        COPYONLY)
+configure_file(lua/gci_bridge.lua    ${CMAKE_BINARY_DIR}/gci_bridge.lua    COPYONLY)
+configure_file(lua/gci_mission.lua   ${CMAKE_BINARY_DIR}/gci_mission.lua   COPYONLY)
+configure_file(lua/test_mission.lua  ${CMAKE_BINARY_DIR}/test_mission.lua  COPYONLY)
 
 message(STATUS "========================================")
 message(STATUS "  Compiler : ${CMAKE_C_COMPILER_ID}")
