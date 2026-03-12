@@ -68,6 +68,7 @@ if(BUILD_DLL)
 
         add_library(gci_dll SHARED
             src/gci_lua.c
+            src/gci_lua.def
         )
         set_target_properties(gci_dll PROPERTIES
             OUTPUT_NAME         "RedGCI"
