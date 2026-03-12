@@ -34,9 +34,11 @@
  *   gci_merge_update(ctx_id, rel_bearing, range, altitude_delta, splash)
  */
 
+#define LUA_BUILD_AS_DLL  // vor den Includes!
 #include <lua.h>
 #include <lauxlib.h>
 #include <string.h>
+#include <lualib.h>
 #include <math.h>
 
 #include "gci_types.h"
