@@ -416,27 +416,38 @@ static const luaL_Reg gci_funcs[] = {
 
 /* ─────────────────────────────────────────────────────────────
  *  luaopen_gci — Entry Point
- *  DCS ruft package.loadlib(path, "luaopen_gci")() auf
+ *  DCS ruft require("gci_core") auf → luaopen_gci wird aufgerufen
+ *  Analog zu HoundTTS: luaL_register + extern "C" __declspec(dllexport)
  * ───────────────────────────────────────────────────────────── */
 
-#ifdef _WIN32
-#  define GCI_EXPORT __declspec(dllexport)
-#else
-#  define GCI_EXPORT __attribute__((visibility("default")))
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-GCI_EXPORT int luaopen_gci(lua_State *L) {
+#ifdef _WIN32
+__declspec(dllexport)
+#else
+__attribute__((visibility("default")))
+#endif
+int luaopen_gci(lua_State *L) {
     ensure_init();
 
-    /* Alle Funktionen global registrieren (DCS-Konvention) */
+    /* Als Tabelle "gci" registrieren — analog zu luaL_register in HoundTTS */
+    luaL_register(L, "gci", gci_funcs);
+
+    /* Zusätzlich alle Funktionen global verfügbar machen —
+     * gci_bridge.lua ruft gci_compute_intercept() direkt auf, nicht gci.gci_compute_intercept() */
     const luaL_Reg *f = gci_funcs;
     while (f->name) {
-        lua_pushcfunction(L, f->func);
-        lua_setglobal(L, f->name);
+        lua_getfield(L, -1, f->name);   /* hole Funktion aus der Tabelle */
+        lua_setglobal(L, f->name);      /* setze als global */
         f++;
     }
 
-    /* Rückgabe: 1 = Erfolg (DCS erwartet das) */
-    lua_pushboolean(L, 1);
+    /* Tabelle auf Stack lassen — Lua erwartet 1 Rückgabewert */
     return 1;
 }
+
+#ifdef __cplusplus
+}
+#endif
