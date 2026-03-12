@@ -107,6 +107,12 @@ jobs:
             -DLUA51_LIB="${{ github.workspace }}/third_party/lua51/lua51.lib" `
             -DLUA51_INCLUDE="${{ github.workspace }}/third_party/lua51/include"
 
+      # DEBUG TEMPORÄR
+      - name: Debug CMake cache
+        run: |
+          cmake -B build -L | findstr -i "LUA\|DLL\|BUILD"
+          dir "${{ github.workspace }}\third_party\lua51\"
+
       - name: Build
         run: cmake --build build --config Release --parallel
 
