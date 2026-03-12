@@ -81,6 +81,9 @@ if(BUILD_DLL)
         )
         target_compile_definitions(gci_dll PRIVATE
             LUA_BUILD_AS_DLL
+            WIN32_LEAN_AND_MEAN
+            NOMINMAX
+            _CRT_SECURE_NO_WARNINGS
         )
         target_link_libraries(gci_dll PRIVATE
             gci_core
