@@ -65,6 +65,7 @@ if(BUILD_DLL)
         set_target_properties(gci_dll PROPERTIES
             OUTPUT_NAME "gci_core"      # → gci_core.dll
             PREFIX      ""              # kein lib-Prefix auf Linux
+            ARCHIVE_OUTPUT_NAME "gci_dll"   # ← Importlib heißt gci_dll.lib, kein Konflikt
         )
         target_include_directories(gci_dll PRIVATE
             include
