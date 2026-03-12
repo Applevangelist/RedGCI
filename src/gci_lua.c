@@ -429,7 +429,7 @@ __declspec(dllexport)
 #else
 __attribute__((visibility("default")))
 #endif
-int luaopen_gci_core(lua_State *L) {
+int luaopen_RedGCI(lua_State *L) {
     ensure_init();
 
     /* Als Tabelle "gci" registrieren — analog zu luaL_register in HoundTTS */
