@@ -294,6 +294,7 @@ static int l_fsm_transmission(lua_State *L)
     /* Transmission bauen */
     GCITransmission tx;
     InterceptContext prev = *ctx;   /* Snapshot für Delta-Logik */
+    prev.state = ctx->prev_state;   /* Delta-Logik gegen vorherigen State */
     gci_build_transmission(ctx, &prev, callsign, &sol, &tx);
 
     /* 4 Rückgabewerte */
