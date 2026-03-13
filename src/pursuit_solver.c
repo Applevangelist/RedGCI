@@ -140,7 +140,12 @@ void gci_solve_lead(const AircraftState *f, const AircraftState *t,
     float lead_deg = asinf(sin_lead) * GCI_RAD2DEG;
     (void)f_as_observer;
 
-    *hdg = fmodf(base_bearing + lead_deg + 360.0f, 360.0f);
+    /* Lead-Winkel nur anwenden wenn sinnvoll (<45°) */
+    if (fabsf(lead_deg) < 45.0f) {
+        *hdg = fmodf(base_bearing + lead_deg + 360.0f, 360.0f);
+    } else {
+        *hdg = base_bearing;  /* Fallback: direkt auf Ziel */
+    }
 
     float closing = gci_closure_rate(f, t);
     *tti = range / (closing > 10.0f ? closing : 10.0f);
