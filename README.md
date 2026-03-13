@@ -77,9 +77,9 @@ Copy `RedGCI.dll` to your DCS mission scripts folder or a path accessible from `
 
 ## Installation
 
-### 1. DLL laden
+### 1. DLL loading
 
-In `MissionScripting.lua` (oder via dofile-Hook):
+In `MissionScripting.lua` (or via dofile-Hook):
 
 ```lua
 package.cpath = package.cpath .. ";C:/path/to/RedGCI/?.dll"
