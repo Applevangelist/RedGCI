@@ -90,11 +90,12 @@ typedef struct {
 
 // ─────────────────────────────────────────────────────────────
 //  GCI Transmission — Ausgabe an Pilot
+//  token_str Format: "KEY|k=v|k=v|..."
+//  Beispiel: "VECTOR|hdg=165|alt=4500|tti_m=8|rng=62|delay=4.2"
 // ─────────────────────────────────────────────────────────────
 
 typedef struct {
-    char  text_ru[256];      // Russischer Klartext
-    char  text_en[256];      // Englische Übersetzung (Debug/Subtitel)
+    char  token_str[256];    // Token-String für Lua/MSRS
     float delay_sec;         // Realistische Funkverzögerung 3–8s
     bool  weapons_free;
     bool  silence;           // GCI sendet nichts
