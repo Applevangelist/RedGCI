@@ -108,8 +108,9 @@ void gci_build_transmission(
     out->delay_sec = GCI_CLAMP(
         gci_randf(GCI_DELAY_MIN, GCI_DELAY_MAX), 3.0f, 8.0f);
 
-    int hdg_i = (int)(sol->heading_deg + 0.5f);
-    int alt_i = (int)(sol->intercept_point.y);
+    int hdg_i  = (int)(sol->heading_deg + 0.5f);
+    /* Zielhöhe gerundet auf 100m — kein Look-Down Offset */
+    int alt_i  = (int)(sol->target_alt / 100.0f + 0.5f) * 100;
     int rng_km = (int)(ctx->range / 1000.0f + 0.5f);
     int tti_m  = (int)(sol->time_to_intercept / 60.0f);
     int tti_s  = (int)(sol->time_to_intercept) % 60;
@@ -309,3 +310,4 @@ void gci_build_transmission(
         (void)tti_s;
     }
 }
+
