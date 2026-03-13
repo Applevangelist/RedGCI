@@ -388,9 +388,9 @@ static int l_merge_update(lua_State *L) {
     }
 
     lua_pushstring(L,  phase_str);
-    lua_pushstring(L,  tx.text_ru);
-    lua_pushstring(L,  tx.text_en);
+    lua_pushstring(L,  tx.token_str);
     lua_pushboolean(L, tx.silence ? 1 : 0);
+    lua_pushnumber(L,  tx.delay_sec);
     return 4;
 }
 
