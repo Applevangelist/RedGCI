@@ -216,8 +216,8 @@ InterceptSolution gci_compute_intercept(const AircraftState *f,
     // Look-Down Offset direkt hier addieren
     sol.intercept_point.x = t->pos.x + t->vel.x * sol.time_to_intercept;
     sol.intercept_point.z = t->pos.z + t->vel.z * sol.time_to_intercept;
-    sol.intercept_point.y = t->pos.y + t->vel.y * sol.time_to_intercept
-                            + GCI_ALT_OFFSET_LOOKDOWN;
+    sol.intercept_point.y = t->pos.y + GCI_ALT_OFFSET_LOOKDOWN;
+    /* vel.y weglassen — vertikale Bewegung für TTI-Approximation ignorieren */
 
     return sol;
 }
