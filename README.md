@@ -1,3 +1,5 @@
+[![RedGCI Build](https://github.com/Applevangelist/RedGCI/actions/workflows/build.yml/badge.svg)](https://github.com/Applevangelist/RedGCI/actions/workflows/build.yml)
+
 # RedGCI
 
 **Ground Controlled Intercept simulator for DCS World** — Soviet-era GCI doctrine (MiG-29A, ~1985) implemented as a native DLL plugin with Lua mission scripting via MOOSE.
