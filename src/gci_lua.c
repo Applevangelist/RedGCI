@@ -37,8 +37,8 @@
 #define LUA_BUILD_AS_DLL  // vor den Includes!
 #include <lua.h>
 #include <lauxlib.h>
-#include <string.h>
 #include <lualib.h>
+#include <string.h>
 #include <math.h>
 
 #include "gci_types.h"
@@ -121,23 +121,25 @@ static int l_compute_intercept(lua_State *L) {
     memset(&f, 0, sizeof(f));
     memset(&t, 0, sizeof(t));
 
-    /* Jäger: args 1-7 */
-    f.pos.x  = GETF(L, 1);
-    f.pos.z  = GETF(L, 2);
-    f.pos.y  = GETF(L, 3);
+    /* Jäger: args 1-7  (DCS: arg1=dx/Nord, arg2=dy/Höhe, arg3=dz/Ost)
+     * GCI-Kern erwartet: x=Ost, z=Nord, y=Höhe
+     * Mapping: GCI.x←DCS.dz(arg3), GCI.z←DCS.dx(arg1), GCI.y←DCS.dy(arg2) */
+    f.pos.x  = GETF(L, 3);   /* DCS dz (Ost)  → GCI x */
+    f.pos.z  = GETF(L, 1);   /* DCS dx (Nord) → GCI z */
+    f.pos.y  = GETF(L, 2);   /* DCS dy (Höhe) → GCI y */
     f.speed  = GETF(L, 4);
-    f.vel.x  = GETF(L, 5);
-    f.vel.z  = GETF(L, 6);
-    f.vel.y  = GETF(L, 7);
+    f.vel.x  = GETF(L, 7);   /* DCS vz (Ost)  → GCI vx */
+    f.vel.z  = GETF(L, 5);   /* DCS vx (Nord) → GCI vz */
+    f.vel.y  = GETF(L, 6);   /* DCS vy        → GCI vy */
 
-    /* Ziel: args 8-14 */
-    t.pos.x  = GETF(L, 8);
-    t.pos.z  = GETF(L, 9);
-    t.pos.y  = GETF(L, 10);
+    /* Ziel: args 8-14 (gleiches Mapping) */
+    t.pos.x  = GETF(L, 10);  /* DCS dz → GCI x */
+    t.pos.z  = GETF(L, 8);   /* DCS dx → GCI z */
+    t.pos.y  = GETF(L, 9);   /* DCS dy → GCI y */
     t.speed  = GETF(L, 11);
-    t.vel.x  = GETF(L, 12);
-    t.vel.z  = GETF(L, 13);
-    t.vel.y  = GETF(L, 14);
+    t.vel.x  = GETF(L, 14);  /* DCS vz → GCI vx */
+    t.vel.z  = GETF(L, 12);  /* DCS vx → GCI vz */
+    t.vel.y  = GETF(L, 13);  /* DCS vy → GCI vy */
 
     /* Mindestgeschwindigkeit — unter 10 m/s keine sinnvolle Geometrie */
     if (f.speed < 10.0f) {
@@ -171,9 +173,11 @@ static int l_compute_intercept(lua_State *L) {
     lua_pushboolean(L, sol.weapons_free ? 1 : 0);
     lua_pushnumber(L,  sol.range);
     lua_pushnumber(L,  sol.aspect_angle);
-    lua_pushnumber(L,  sol.intercept_point.x);
-    lua_pushnumber(L,  sol.intercept_point.z);
-    lua_pushnumber(L,  sol.intercept_point.y);
+    /* Intercept-Punkt zurück nach DCS-Koordinaten:
+     * GCI x(Ost)→DCS dz,  GCI z(Nord)→DCS dx,  GCI y(Höhe)→DCS dy */
+    lua_pushnumber(L,  sol.intercept_point.z);   /* DCS dx (Nord) */
+    lua_pushnumber(L,  sol.intercept_point.y);   /* DCS dy (Höhe) */
+    lua_pushnumber(L,  sol.intercept_point.x);   /* DCS dz (Ost)  */
     return 9;
 }
 
@@ -426,27 +430,26 @@ static const luaL_Reg gci_funcs[] = {
 extern "C" {
 #endif
 
-/* #ifdef _WIN32 */
+#ifdef _WIN32
 __declspec(dllexport)
-/* #else
+#else
 __attribute__((visibility("default")))
-#endif */
+#endif
 int luaopen_RedGCI(lua_State *L) {
+    ensure_init();
 
     /* Als Tabelle "gci" registrieren — analog zu luaL_register in HoundTTS */
     luaL_register(L, "RedGCI", gci_funcs);
 
     /* Zusätzlich alle Funktionen global verfügbar machen —
-     * gci_bridge.lua ruft gci_compute_intercept() direkt auf, nicht gci.gci_compute_intercept()
+     * gci_bridge.lua ruft gci_compute_intercept() direkt auf, nicht gci.gci_compute_intercept() */
     const luaL_Reg *f = gci_funcs;
     while (f->name) {
-        lua_getfield(L, -1, f->name);   /* hole Funktion aus der Tabelle
-        lua_setglobal(L, f->name);      /* setze als global
+        lua_getfield(L, -1, f->name);   /* hole Funktion aus der Tabelle */
+        lua_setglobal(L, f->name);      /* setze als global */
         f++;
-    } */
+    }
 
-    ensure_init();
-    
     /* Tabelle auf Stack lassen — Lua erwartet 1 Rückgabewert */
     return 1;
 }
