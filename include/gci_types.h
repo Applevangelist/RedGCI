@@ -90,11 +90,12 @@ typedef struct {
 
 // ─────────────────────────────────────────────────────────────
 //  GCI Transmission — Ausgabe an Pilot
+//  token_str Format: "KEY|k=v|k=v|..."
+//  Beispiel: "VECTOR|hdg=165|alt=4500|tti_m=8|rng=62|delay=4.2"
 // ─────────────────────────────────────────────────────────────
 
 typedef struct {
-    char  text_ru[256];      // Russischer Klartext
-    char  text_en[256];      // Englische Übersetzung (Debug/Subtitel)
+    char  token_str[256];    // Token-String für Lua/MSRS
     float delay_sec;         // Realistische Funkverzögerung 3–8s
     bool  weapons_free;
     bool  silence;           // GCI sendet nichts
@@ -129,7 +130,7 @@ typedef struct {
 // ─────────────────────────────────────────────────────────────
 
 #define GCI_RANGE_VECTOR_START   60000.0f   // 60km  – Erste Vektierung
-#define GCI_RANGE_COMMIT         40000.0f   // 40km  – Radar einschalten
+#define GCI_RANGE_COMMIT         30000.0f   // 30km  – Radar einschalten
 #define GCI_RANGE_RADAR_FLOOR    15000.0f   // 15km  – Lock erwartet
 #define GCI_RANGE_VISUAL          5000.0f   //  5km  – Sicht erwartet
 #define GCI_RANGE_MERGE           2000.0f   //  2km  – Merge
@@ -140,7 +141,7 @@ typedef struct {
 #define GCI_ASPECT_REAR_ATTACK     120.0f   // Heckschuss-Aspekt
 
 #define GCI_FUEL_BINGO              0.25f   // 25% – Rückkehr
-#define GCI_WF_RANGE_MAX          35000.0f  // Max Waffenfreigabe-Range
+#define GCI_WF_RANGE_MAX          25000.0f  // Max Waffenfreigabe-Range
 #define GCI_MAX_TTI                 600.0f  // 10 Minuten – Limit
 
 #define GCI_DELAY_MIN               3.0f    // Funkverzögerung Sekunden
