@@ -200,9 +200,15 @@ InterceptSolution gci_compute_intercept(const AircraftState *f,
     }
 
     // Versuch 2: Lead Pursuit (Jäger etwas zu langsam)
+// Versuch 2: Lead Pursuit (Jäger etwas zu langsam)
     gci_solve_lead(f, t, &sol.heading_deg, &sol.time_to_intercept);
     sol.solution_found = true;
     sol.mode = PURSUIT_LEAD;
+
+    /* Intercept-Punkt approximieren — wird von gci_solve_lead nicht gesetzt */
+    sol.intercept_point.x = t->pos.x + t->vel.x * sol.time_to_intercept;
+    sol.intercept_point.z = t->pos.z + t->vel.z * sol.time_to_intercept;
+    /* .y bereits gesetzt: t->pos.y + GCI_ALT_OFFSET_LOOKDOWN */
 
     // Pure Pursuit wird vom GCI nie ausgegeben —
     // bei fehlender Lösung würde er "Цель визуально" sagen
