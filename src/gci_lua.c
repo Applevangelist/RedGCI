@@ -176,8 +176,8 @@ static int l_compute_intercept(lua_State *L) {
     /* Intercept-Punkt zurück nach DCS-Koordinaten:
      * GCI x(Ost)→DCS dz,  GCI z(Nord)→DCS dx,  GCI y(Höhe)→DCS dy */
     lua_pushnumber(L,  sol.intercept_point.z);   /* DCS dx (Nord) */
-    lua_pushnumber(L,  sol.intercept_point.y);   /* DCS dy (Höhe) */
-    lua_pushnumber(L,  sol.intercept_point.x);   /* DCS dz (Ost)  */
+    lua_pushnumber(L,  sol.intercept_point.x);   /* DCS dy (Höhe) */
+    lua_pushnumber(L,  sol.intercept_point.y);   /* DCS dz (Ost)  */
     return 9;
 }
 
