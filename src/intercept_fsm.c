@@ -96,6 +96,26 @@ static const char *bearing_clock(float rel_bearing) {
     return "слева";
 }
 
+// ─────────────────────────────────────────────────────────────
+//  gci_build_transmission — Token-String Ausgabe (Option B)
+//  Gibt strukturierte Token zurück statt Freitext.
+//  Lua parst den Token-String und baut lokalisierte Strings.
+//
+//  Token-Format:
+//    "KEY|hdg=NNN|alt=NNNN|rng=NN|tti_m=N|tti_s=NN|
+//         aspect=NNN|wf=true|delay=N.N"
+//
+//  Keys (State → Token-Key):
+//    VECTOR          → VECTOR / VECTOR_WITH_TTI
+//    COMMIT (first)  → COMMIT_FIRST
+//    COMMIT (nudge)  → COMMIT_NO_LOCK / COMMIT_NUDGE
+//    RADAR_CONTACT   → RADAR_LOCK_WF / RADAR_LOCK_HOLD / RADAR_WF_NOW
+//    VISUAL          → VISUAL_CONFIRM
+//    NOTCH           → NOTCH_ENTRY / NOTCH_UPDATE
+//    ABORT           → ABORT_BINGO / ABORT_THREAT
+//    MERGE/RTB       → silence=true
+// ─────────────────────────────────────────────────────────────
+
 void gci_build_transmission(
     const InterceptContext  *ctx,
     const InterceptContext  *prev,
@@ -104,36 +124,47 @@ void gci_build_transmission(
     GCITransmission         *out)
 {
     memset(out, 0, sizeof(*out));
-    out->silence   = false;
-    out->delay_sec = GCI_CLAMP(
+    out->silence      = false;
+    out->weapons_free = sol->weapons_free;
+    out->delay_sec    = GCI_CLAMP(
         gci_randf(GCI_DELAY_MIN, GCI_DELAY_MAX), 3.0f, 8.0f);
 
-    int hdg_i  = (int)(sol->heading_deg + 0.5f);
-    /* Zielhöhe gerundet auf 100m — kein Look-Down Offset */
-    int alt_i  = (int)(sol->target_alt / 100.0f + 0.5f) * 100;
-    int rng_km = (int)(ctx->range / 1000.0f + 0.5f);
-    int tti_m  = (int)(sol->time_to_intercept / 60.0f);
-    int tti_s  = (int)(sol->time_to_intercept) % 60;
+    /* Gemeinsame Werte vorberechnen */
+    int hdg_i    = (int)(sol->heading_deg + 0.5f);
+    int alt_i    = (int)(sol->target_alt  / 100.0f + 0.5f) * 100;
+    int rng_km   = (int)(ctx->range       / 1000.0f + 0.5f);
+    int aspect_i = (int)(ctx->aspect_angle + 0.5f);
+    int tti_m    = (int)(sol->time_to_intercept / 60.0f);
+    int tti_s    = (int)(sol->time_to_intercept) % 60;
+    float delay  = out->delay_sec;
+
+    /* Hilfsmakro: Token-String in out->token_str schreiben */
+#define EMIT(fmt, ...) \
+    snprintf(out->token_str, sizeof(out->token_str), fmt, ##__VA_ARGS__)
 
     switch (ctx->state) {
 
         // ── VECTOR ───────────────────────────────────────────
         case STATE_VECTOR: {
-            snprintf(out->text_ru, sizeof(out->text_ru),
-                "%s, курс %03d, высота %d, скорость девятьсот.",
-                callsign, hdg_i, alt_i);
-            snprintf(out->text_en, sizeof(out->text_en),
-                "%s, VECTOR %03d, altitude %dm, 900 kph.",
-                callsign, hdg_i, alt_i);
-
-            // Nur bei bedeutender Kursänderung oder erstem Tick
-            if (prev->state != STATE_VECTOR)
+            if (prev->state != STATE_VECTOR) {
+                /* Erster VECTOR-Tick: mit TTI wenn sinnvoll */
+                if (tti_m > 0) {
+                    EMIT("VECTOR_WITH_TTI|hdg=%d|alt=%d|rng=%d"
+                         "|tti_m=%d|tti_s=%d|delay=%.1f",
+                         hdg_i, alt_i, rng_km, tti_m, tti_s, delay);
+                } else {
+                    EMIT("VECTOR|hdg=%d|alt=%d|rng=%d|delay=%.1f",
+                         hdg_i, alt_i, rng_km, delay);
+                }
                 break;
-
-            float hdg_delta = fabsf(sol->heading_deg -
-                gci_bearing(ctx->range, 0.0f));  // vereinfacht
+            }
+            /* Folge-Ticks: nur bei signifikanter Kursänderung */
+            float hdg_delta = fabsf(sol->heading_deg - ctx->aspect_angle);
             if (hdg_delta < 5.0f && ctx->ticks_in_state > 3) {
-                out->silence = true;  // Kurs stabil, nicht nerven
+                out->silence = true;
+            } else {
+                EMIT("VECTOR|hdg=%d|alt=%d|rng=%d|delay=%.1f",
+                     hdg_i, alt_i, rng_km, delay);
             }
             break;
         }
@@ -141,40 +172,18 @@ void gci_build_transmission(
         // ── COMMIT ───────────────────────────────────────────
         case STATE_COMMIT: {
             bool first = (prev->state != STATE_COMMIT);
-
             if (first) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель впереди, дальность %d, высота %d. "
-                    "Включи локатор. Ищи.",
-                    callsign, rng_km, alt_i);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, BOGEY ahead, %dkm, altitude %dm. "
-                    "Search radar. Look.",
-                    callsign, rng_km, alt_i);
+                EMIT("COMMIT_FIRST|hdg=%d|alt=%d|rng=%d"
+                     "|aspect=%d|delay=%.1f",
+                     hdg_i, alt_i, rng_km, aspect_i, delay);
             } else if (ctx->ticks_in_state == 6) {
-                // 30 Sekunden vergangen (6 Takte × 5s), immer noch kein Lock
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, поправка: азимут %d, дальность %d. "
-                    "Почему нет захвата?",
-                    callsign,
-                    (int)ctx->aspect_angle,
-                    rng_km);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, CORRECTION: bearing %d, %dkm. "
-                    "Why no lock?",
-                    callsign,
-                    (int)ctx->aspect_angle,
-                    rng_km);
+                EMIT("COMMIT_NO_LOCK|hdg=%d|rng=%d"
+                     "|aspect=%d|delay=%.1f",
+                     hdg_i, rng_km, aspect_i, delay);
             } else if (ctx->ticks_in_state > 8) {
-                // >40s — Mikrokorrektur
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, довернись %s десять градусов.",
-                    callsign,
-                    (ctx->aspect_angle > 5.0f) ? "вправо" : "влево");
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, turn %s ten degrees.",
-                    callsign,
-                    (ctx->aspect_angle > 5.0f) ? "right" : "left");
+                /* dir_lr wird in Lua aus aspect_angle abgeleitet */
+                EMIT("COMMIT_NUDGE|hdg=%d|aspect=%d|delay=%.1f",
+                     hdg_i, aspect_i, delay);
             } else {
                 out->silence = true;
             }
@@ -184,40 +193,22 @@ void gci_build_transmission(
         // ── RADAR CONTACT ─────────────────────────────────────
         case STATE_RADAR_CONTACT: {
             if (prev->state != STATE_RADAR_CONTACT) {
-                // Erster Tick nach Lock-Meldung
                 if (sol->weapons_free) {
-                    snprintf(out->text_ru, sizeof(out->text_ru),
-                        "%s, захват подтверждён. Дальность %d. "
-                        "Цель разрешена. Атакуй.",
-                        callsign, rng_km);
-                    snprintf(out->text_en, sizeof(out->text_en),
-                        "%s, lock confirmed. %dkm. "
-                        "WEAPONS FREE. Attack.",
-                        callsign, rng_km);
+                    EMIT("RADAR_LOCK_WF|rng=%d|delay=%.1f",
+                         rng_km, delay);
                     out->weapons_free = true;
                 } else {
-                    snprintf(out->text_ru, sizeof(out->text_ru),
-                        "%s, захват подтверждён. Дальность %d. "
-                        "Жди разрешения.",
-                        callsign, rng_km);
-                    snprintf(out->text_en, sizeof(out->text_en),
-                        "%s, lock confirmed. %dkm. "
-                        "Await clearance.",
-                        callsign, rng_km);
+                    EMIT("RADAR_LOCK_HOLD|rng=%d|delay=%.1f",
+                         rng_km, delay);
                 }
-            } else if (!sol->weapons_free && ctx->range < GCI_WF_RANGE_MAX
+            } else if (!sol->weapons_free
+                       && ctx->range        < GCI_WF_RANGE_MAX
                        && ctx->aspect_angle > GCI_ASPECT_REAR_ATTACK
-                       && prev->state == STATE_RADAR_CONTACT) {
-                // Waffenfreigabe gerade erreicht
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель разрешена.",
-                    callsign);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, WEAPONS FREE.",
-                    callsign);
+                       && prev->state       == STATE_RADAR_CONTACT) {
+                EMIT("RADAR_WF_NOW|rng=%d|delay=%.1f",
+                     rng_km, delay);
                 out->weapons_free = true;
             } else {
-                // GCI schweigt — Pilot arbeitet
                 out->silence = true;
             }
             break;
@@ -226,12 +217,8 @@ void gci_build_transmission(
         // ── VISUAL ───────────────────────────────────────────
         case STATE_VISUAL: {
             if (prev->state != STATE_VISUAL) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, визуальный. Цель разрешена.",
-                    callsign);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, visual confirmed. WEAPONS FREE.",
-                    callsign);
+                EMIT("VISUAL_CONFIRM|rng=%d|delay=%.1f",
+                     rng_km, delay);
                 out->weapons_free = true;
             } else {
                 out->silence = true;
@@ -242,24 +229,11 @@ void gci_build_transmission(
         // ── NOTCH ─────────────────────────────────────────────
         case STATE_NOTCH: {
             if (prev->state != STATE_NOTCH) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель маневрирует. Жди команды.",
-                    callsign);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, target maneuvering. Standby.",
-                    callsign);
+                EMIT("NOTCH_ENTRY|rng=%d|delay=%.1f",
+                     rng_km, delay);
             } else if (ctx->ticks_in_state % 8 == 0) {
-                // Alle 40s ein Lageupdate
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель %s, дальность %d. Держи.",
-                    callsign,
-                    bearing_clock(ctx->aspect_angle),
-                    rng_km);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, target %s, %dkm. Hold.",
-                    callsign,
-                    bearing_clock(ctx->aspect_angle),
-                    rng_km);
+                EMIT("NOTCH_UPDATE|rng=%d|aspect=%d|delay=%.1f",
+                     rng_km, aspect_i, delay);
             } else {
                 out->silence = true;
             }
@@ -268,30 +242,16 @@ void gci_build_transmission(
 
         // ── ABORT ─────────────────────────────────────────────
         case STATE_ABORT: {
-            out->delay_sec = 1.5f;  // Sofort!
+            out->delay_sec = 1.5f;
             if (ctx->fuel_fraction < GCI_FUEL_BINGO) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, топливо критическое. Прекрати атаку. "
-                    "Немедленно домой. Курс %03d.",
-                    callsign, hdg_i);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, BINGO FUEL. Break off. "
-                    "RTB immediately. Course %03d.",
-                    callsign, hdg_i);
+                EMIT("ABORT_BINGO|hdg=%d|delay=1.5", hdg_i);
             } else {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, угроза. Прекрати атаку. "
-                    "Курс %03d, снижайся.",
-                    callsign, hdg_i);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, THREAT WARNING. Break off. "
-                    "Course %03d, descend.",
-                    callsign, hdg_i);
+                EMIT("ABORT_THREAT|hdg=%d|delay=1.5", hdg_i);
             }
             break;
         }
 
-        // ── MERGE — handled by merge_controller ──────────────
+        // ── MERGE / RTB / default ─────────────────────────────
         case STATE_MERGE:
         case STATE_RTB:
         default:
@@ -299,15 +259,5 @@ void gci_build_transmission(
             break;
     }
 
-    // Geschätzte Zeit nur in VECTOR ausgeben (wenn >60s)
-    if (ctx->state == STATE_VECTOR && tti_m > 0 &&
-        !out->silence && prev->state != STATE_VECTOR) {
-        char tti_buf[64];
-        snprintf(tti_buf, sizeof(tti_buf),
-            " До цели %d мин.", tti_m);
-        strncat(out->text_ru,
-                tti_buf, sizeof(out->text_ru) - strlen(out->text_ru) - 1);
-        (void)tti_s;
-    }
+#undef EMIT
 }
-
