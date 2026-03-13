@@ -251,26 +251,27 @@ static int l_fsm_update(lua_State *L) {
 }
 
 
-/* ═════════════════════════════════════════════════════════════
- *  3.  gci_fsm_transmission
- *
- *  Lua-Signatur:
- *    silence, text_ru, text_en, weapons_free, delay =
- *        gci_fsm_transmission(ctx_id, callsign,
- *            hdg, tti, mode_str, wf,
- *            ip_x, ip_z, ip_y)
- *
- *  Rückgabewerte:
- *    silence     (boolean)
- *    text_ru     (string)
- *    text_en     (string)
- *    weapons_free(boolean)
- *    delay       (number)  Sekunden Funkverzögerung
- * ═════════════════════════════════════════════════════════════ */
+// ─────────────────────────────────────────────────────────────
+//  l_fsm_transmission — Lua Binding (Token-String Version)
+//
+//  Lua-Aufruf:
+//    local silence, token_str, weapons_free, delay =
+//        _gci.gci_fsm_transmission(
+//            id, callsign,
+//            hdg, tti, mode_str, wf,
+//            ip_x, ip_z, ip_y,
+//            target_alt)   -- NEU: Zielhöhe ohne Offset
+//
+//  Rückgabe (4 Werte):
+//    silence      boolean
+//    token_str    string   z.B. "VECTOR|hdg=165|alt=4500|..."
+//    weapons_free boolean
+//    delay        number   Sekunden
+// ─────────────────────────────────────────────────────────────
 
-static int l_fsm_transmission(lua_State *L) {
+static int l_fsm_transmission(lua_State *L)
+{
     ensure_init();
-
     InterceptContext *ctx = get_ctx(L, 1);
     if (!ctx) return 0;
 
@@ -281,24 +282,26 @@ static int l_fsm_transmission(lua_State *L) {
     memset(&sol, 0, sizeof(sol));
     sol.heading_deg       = GETF(L, 3);
     sol.time_to_intercept = GETF(L, 4);
-    /* mode_str: arg 5, nur für Vollständigkeit */
+    /* arg 5: mode_str — nur für Vollständigkeit, nicht genutzt */
     sol.weapons_free      = lua_toboolean(L, 6) != 0;
     sol.intercept_point.x = GETF(L, 7);
     sol.intercept_point.z = GETF(L, 8);
     sol.intercept_point.y = GETF(L, 9);
-    sol.solution_found    = (sol.heading_deg > 0.0f || sol.time_to_intercept > 0.0f);
+    sol.target_alt        = GETF(L, 10);   /* Zielhöhe ohne Look-Down Offset */
+    sol.solution_found    = (sol.heading_deg > 0.0f ||
+                             sol.time_to_intercept > 0.0f);
 
     /* Transmission bauen */
     GCITransmission tx;
     InterceptContext prev = *ctx;   /* Snapshot für Delta-Logik */
     gci_build_transmission(ctx, &prev, callsign, &sol, &tx);
 
-    lua_pushboolean(L, tx.silence ? 1 : 0);
-    lua_pushstring(L,  tx.text_ru);
-    lua_pushstring(L,  tx.text_en);
+    /* 4 Rückgabewerte */
+    lua_pushboolean(L, tx.silence      ? 1 : 0);
+    lua_pushstring (L, tx.token_str);
     lua_pushboolean(L, tx.weapons_free ? 1 : 0);
-    lua_pushnumber(L,  tx.delay_sec);
-    return 5;
+    lua_pushnumber (L, tx.delay_sec);
+    return 4;
 }
 
 
