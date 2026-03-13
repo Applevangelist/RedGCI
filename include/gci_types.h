@@ -39,6 +39,7 @@ typedef struct {
     float       heading_deg;
     float       time_to_intercept;   // Sekunden
     Vec3        intercept_point;
+    float       target_alt;          // Zielhöhe MSL in Metern (ohne Look-Down Offset)
     bool        solution_found;
     float       aspect_angle;        // 0=Nose-on, 180=Tail
     float       range;               // Aktuelle Distanz, Meter
