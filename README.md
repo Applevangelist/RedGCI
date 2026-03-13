@@ -1,4 +1,4 @@
-[![RedGCI Build](https://github.com/Applevangelist/RedGCI/actions/workflows/build.yml/badge.svg)](https://github.com/Applevangelist/RedGCI/actions/workflows/build.yml)
+[![RedGCI Build](https://github.com/Applevangelist/RedGCI/actions/workflows/CI.yml/badge.svg)](https://github.com/Applevangelist/RedGCI/actions/workflows/CI.yml)
 
 # RedGCI
 
