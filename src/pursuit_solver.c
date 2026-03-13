@@ -147,8 +147,12 @@ void gci_solve_lead(const AircraftState *f, const AircraftState *t,
         *hdg = base_bearing;   // Fallback: direkt auf Ziel
     }
 
-    float closing = gci_closure_rate(f, t);
-    *tti = range / (closing > 10.0f ? closing : 10.0f);
+  /* TTI: Abstand / (Jägergeschwindigkeit - Zielgeschwindigkeit-Projektion) */
+  float closing = gci_closure_rate(f, t);
+  if (closing < 50.0f) closing = 50.0f;  /* Minimum 50 m/s — verhindert TTI-Explosion */
+  *tti = range / closing;
+  /* Hard cap */
+  if (*tti > GCI_MAX_TTI) *tti = GCI_MAX_TTI;
 }
 
 
