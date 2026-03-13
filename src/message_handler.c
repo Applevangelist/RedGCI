@@ -15,7 +15,6 @@ static MergeContext      s_merge;
 static MergeContext      s_prev_merge;
 static bool              s_initialized = false;
 
-// Letzter berechneter Kurs (für RTB-Referenz)
 static float s_last_hdg = 0.0f;
 
 static const char *s_callsign = "Сокол-1";
@@ -27,7 +26,6 @@ void gci_session_reset(void) {
     gci_merge_context_init(&s_prev_merge);
     s_initialized = true;
 }
-
 
 // ─────────────────────────────────────────────────────────────
 //  State-Namen für Debug-Output
@@ -55,7 +53,6 @@ static const char *mode_name(PursuitMode m) {
         default:                return "NONE";
     }
 }
-
 
 // ─────────────────────────────────────────────────────────────
 //  Haupt-Dispatcher
@@ -94,11 +91,11 @@ int gci_process_message(const char *msg, char *out, int out_len) {
             return -1;
         }
 
-        target.vel.x = tvx;
-        target.vel.z = tvz;
-        target.vel.y = tvy;
+        target.vel.x  = tvx;
+        target.vel.z  = tvz;
+        target.vel.y  = tvy;
         fighter.vel.x = 0.0f;
-        fighter.vel.z = 0.0f;   // Jäger-Velocity wird für Solver nicht direkt gebraucht
+        fighter.vel.z = 0.0f;
 
         // Geometrie berechnen
         float range   = gci_vec2_len(
@@ -116,8 +113,8 @@ int gci_process_message(const char *msg, char *out, int out_len) {
         InterceptState new_state = gci_fsm_transition(&s_ctx);
 
         if (new_state != s_ctx.state) {
-            s_ctx.prev_state   = s_ctx.state;
-            s_ctx.state        = new_state;
+            s_ctx.prev_state     = s_ctx.state;
+            s_ctx.state          = new_state;
             s_ctx.ticks_in_state = 0;
         } else {
             s_ctx.ticks_in_state++;
@@ -130,7 +127,6 @@ int gci_process_message(const char *msg, char *out, int out_len) {
         // Transmission generieren
         GCITransmission tx;
         if (s_ctx.state == STATE_MERGE) {
-            // Merge-Phase
             s_prev_merge = s_merge;
             s_merge.range             = range;
             s_merge.bearing_to_target = aspect;
@@ -151,22 +147,21 @@ int gci_process_message(const char *msg, char *out, int out_len) {
                                     s_callsign, &sol, &tx);
         }
 
-        // Antwort formatieren
+        // Antwort formatieren — token_str statt text_ru/text_en
         if (tx.silence) {
             snprintf(out, out_len, "SILENCE");
         } else {
             snprintf(out, out_len,
                 "HDG:%03d|TTI:%.0f|MODE:%s|WF:%d|"
                 "STATE:%s|RANGE:%.0f|ASPECT:%.1f|DELAY:%.1f|"
-                "RU:%s|EN:%s",
+                "TOKEN:%s",
                 (int)(sol.heading_deg + 0.5f),
                 sol.time_to_intercept,
                 mode_name(sol.mode),
                 (int)tx.weapons_free,
                 state_name(s_ctx.state),
                 range, aspect, tx.delay_sec,
-                tx.text_ru,
-                tx.text_en);
+                tx.token_str);
         }
         return 0;
     }
@@ -213,8 +208,7 @@ int gci_process_message(const char *msg, char *out, int out_len) {
         GCITransmission tx;
         gci_build_merge_transmission(&s_merge, &s_prev_merge,
                                       s_callsign, &tx);
-        snprintf(out, out_len, "RU:%s|EN:%s",
-                 tx.text_ru, tx.text_en);
+        snprintf(out, out_len, "TOKEN:%s", tx.token_str);
         return 0;
     }
 

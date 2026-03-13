@@ -19,12 +19,9 @@ MergePhase gci_merge_transition(const MergeContext *ctx,
     if (ctx->radar_lost)
         return MERGE_LOST;
 
-    // Separation: beide fliegen auseinander
     if (ctx->closure_rate < -30.0f && ctx->range > 3000.0f)
         return MERGE_SEPARATION;
 
-    // Überschuss: Jäger hat überschossen (Ziel jetzt hinter ihm)
-    // bearing_to_target > 90° und < 270° → Ziel hinter uns
     if (ctx->bearing_to_target > 100.0f &&
         ctx->bearing_to_target < 260.0f &&
         ctx->range < 5000.0f)
@@ -36,9 +33,16 @@ MergePhase gci_merge_transition(const MergeContext *ctx,
     return ctx->phase;
 }
 
-
 // ─────────────────────────────────────────────────────────────
-//  Merge Transmissions
+//  Merge Transmissions — Token-String Ausgabe
+//
+//  Token-Keys:
+//    MERGE_ENTRY       brg, dir_rl
+//    MERGE_OVERSHOOT   brg, alt_rel ("low"|"high"|"")
+//    MERGE_SEPARATION  brg, rng
+//    MERGE_REATTACK    brg, rng
+//    MERGE_LOST        brg, rng
+//    MERGE_SPLASH      (keine Parameter)
 // ─────────────────────────────────────────────────────────────
 
 void gci_build_merge_transmission(
@@ -47,92 +51,62 @@ void gci_build_merge_transmission(
     const char         *callsign,
     GCITransmission    *out)
 {
+    (void)callsign;   /* Callsign wird in Lua eingesetzt */
+
     memset(out, 0, sizeof(*out));
     out->silence   = false;
     out->delay_sec = GCI_CLAMP(
         gci_randf(GCI_DELAY_MERGE_MIN, GCI_DELAY_MERGE_MAX),
         2.0f, 5.0f);
 
-    int brg = (int)(ctx->bearing_to_target + 0.5f);
+    int brg    = (int)(ctx->bearing_to_target + 0.5f);
     int rng_km = (int)(ctx->range / 1000.0f + 0.5f);
+    float delay = out->delay_sec;
+
+    /* Zielseite: bearing < 180 = rechts */
+    const char *dir_rl = (ctx->bearing_to_target < 180.0f)
+                         ? "right" : "left";
+
+    /* Höhenrelation für OVERSHOOT */
+    const char *alt_rel = "";
+    if      (ctx->altitude_delta >  400.0f) alt_rel = "low";
+    else if (ctx->altitude_delta < -400.0f) alt_rel = "high";
+
+#define EMIT(fmt, ...) \
+    snprintf(out->token_str, sizeof(out->token_str), fmt, ##__VA_ARGS__)
 
     switch (ctx->phase) {
 
         case MERGE_ENTRY: {
-            // GCI bestätigt Merge, gibt sofortige Lageinfo
-            const char *side = (ctx->bearing_to_target < 180.0f)
-                               ? "справа" : "слева";
-            snprintf(out->text_ru, sizeof(out->text_ru),
-                "%s, контакт %s, %d градусов. Бой.",
-                callsign, side, brg);
-            snprintf(out->text_en, sizeof(out->text_en),
-                "%s, contact %s, %d degrees. FIGHT.",
-                callsign,
-                (ctx->bearing_to_target < 180.0f) ? "right" : "left",
-                brg);
+            EMIT("MERGE_ENTRY|brg=%d|dir_rl=%s|delay=%.1f",
+                 brg, dir_rl, delay);
             break;
         }
 
         case MERGE_OVERSHOOT: {
-            // Ziel hinter uns — GCI sieht es sofort
-            if (ctx->altitude_delta > 400.0f) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель сзади-ниже, %d. Левый разворот.",
-                    callsign, brg);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, bandit behind-low, %d. LEFT turn.",
-                    callsign, brg);
-            } else if (ctx->altitude_delta < -400.0f) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель сзади-выше, %d. Правый разворот.",
-                    callsign, brg);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, bandit behind-high, %d. RIGHT turn.",
-                    callsign, brg);
-            } else {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель сзади, %d градусов. Разворот!",
-                    callsign, brg);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, bandit behind, %d degrees. TURN!",
-                    callsign, brg);
-            }
+            EMIT("MERGE_OVERSHOOT|brg=%d|dir_rl=%s|alt_rel=%s|delay=%.1f",
+                 brg, dir_rl, alt_rel, delay);
             break;
         }
 
         case MERGE_SEPARATION: {
             if (ctx->pass_count < 3) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель %d градусов, %d км. Повторная атака.",
-                    callsign, brg, rng_km);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, bandit %d degrees, %dkm. RE-ATTACK.",
-                    callsign, brg, rng_km);
+                EMIT("MERGE_REATTACK|brg=%d|rng=%d|delay=%.1f",
+                     brg, rng_km, delay);
             } else {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, прекрати бой. Домой.",
-                    callsign);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, BREAK OFF. RTB.",
-                    callsign);
+                EMIT("ABORT_THREAT|hdg=%d|delay=%.1f",
+                     brg, delay);
             }
             break;
         }
 
         case MERGE_REATTACK: {
-            // GCI vektiert erneut — kurze, schnelle Befehle
             if (prev->phase != MERGE_REATTACK) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, набери скорость. Цель %d, %d км.",
-                    callsign, brg, rng_km);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, gain speed. Target %d, %dkm.",
-                    callsign, brg, rng_km);
+                EMIT("MERGE_REATTACK|brg=%d|rng=%d|delay=%.1f",
+                     brg, rng_km, delay);
             } else if (ctx->ticks_in_phase % 3 == 0) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, цель %d, %d.", callsign, brg, rng_km);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, target %d, %dkm.", callsign, brg, rng_km);
+                EMIT("MERGE_REATTACK|brg=%d|rng=%d|delay=%.1f",
+                     brg, rng_km, delay);
             } else {
                 out->silence = true;
             }
@@ -141,22 +115,11 @@ void gci_build_merge_transmission(
 
         case MERGE_LOST: {
             if (prev->phase != MERGE_LOST) {
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, потерял цель на радаре. "
-                    "Последний курс %d, высота %d. Визуально!",
-                    callsign, brg, (int)ctx->range);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, LOST on radar. "
-                    "Last bearing %d. Look for visual!",
-                    callsign, brg);
+                EMIT("MERGE_LOST|brg=%d|rng=%d|delay=%.1f",
+                     brg, rng_km, delay);
             } else if (ctx->ticks_in_phase == 4) {
-                // Nach 20s: Lageabschätzung
-                snprintf(out->text_ru, sizeof(out->text_ru),
-                    "%s, предположительно %d, %d км. Осторожно.",
-                    callsign, brg, rng_km);
-                snprintf(out->text_en, sizeof(out->text_en),
-                    "%s, estimated %d, %dkm. Caution.",
-                    callsign, brg, rng_km);
+                EMIT("MERGE_LOST|brg=%d|rng=%d|delay=%.1f",
+                     brg, rng_km, delay);
             } else {
                 out->silence = true;
             }
@@ -165,13 +128,10 @@ void gci_build_merge_transmission(
 
         case MERGE_SPLASH: {
             out->delay_sec = 1.5f;
-            snprintf(out->text_ru, sizeof(out->text_ru),
-                "%s, цель уничтожена. Молодец. Курс домой.",
-                callsign);
-            snprintf(out->text_en, sizeof(out->text_en),
-                "%s, SPLASH. Well done. RTB.",
-                callsign);
+            EMIT("MERGE_SPLASH|delay=1.5");
             break;
         }
     }
+
+#undef EMIT
 }
