@@ -115,8 +115,10 @@ function RedGCI.getCtxId(callsign)
         RedGCI._ctx_map[callsign] = RedGCI._ctx_next
         RedGCI._ctx_next = RedGCI._ctx_next + 1
         _gci.gci_fsm_reset(RedGCI._ctx_map[callsign])
-        env.info("[RedGCI] Neuer Kontext " .. RedGCI._ctx_map[callsign] ..
+		if RedGCI.DEBUG then
+			env.info("[RedGCI] Neuer Kontext " .. RedGCI._ctx_map[callsign] ..
                  " für " .. callsign)
+		end
     end
     return RedGCI._ctx_map[callsign]
 end
@@ -126,7 +128,9 @@ function RedGCI.releaseCtx(callsign)
     if id then
         _gci.gci_fsm_reset(id)
         RedGCI._ctx_map[callsign] = nil
-        env.info("[RedGCI] Kontext " .. id .. " freigegeben (" .. callsign .. ")")
+		if RedGCI.DEBUG then
+			env.info("[RedGCI] Kontext " .. id .. " freigegeben (" .. callsign .. ")")
+		end
     end
 end
 
@@ -134,17 +138,18 @@ function RedGCI.computeIntercept(fighter, target)
     -- DEBUG
     local dx = target.x - fighter.x
     local dz = target.z - fighter.z
-    env.info(string.format("[DEBUG] F: x=%.0f y=%.0f z=%.0f spd=%.0f | T: x=%.0f y=%.0f z=%.0f | dx=%.0f dz=%.0f | raw_bearing=%.0f",
-        fighter.x, fighter.y, fighter.z, fighter.spd,
-        target.x, target.y, target.z,
-        dx, dz,
-        math.deg(math.atan2(dz, dx)) % 360))
+	if RedGCI.DEBUG then
+		env.info(string.format("[DEBUG] F: x=%.0f y=%.0f z=%.0f spd=%.0f | T: x=%.0f y=%.0f z=%.0f | dx=%.0f dz=%.0f | raw_bearing=%.0f",
+			fighter.x, fighter.y, fighter.z, fighter.spd,
+			target.x, target.y, target.z,
+			dx, dz,
+			math.deg(math.atan2(dz, dx)) % 360))
 
-    -- NEU: Velocity debug
-    env.info(string.format("[DEBUG_VEL] F: vx=%.1f vy=%.1f vz=%.1f | T: vx=%.1f vy=%.1f vz=%.1f",
-        fighter.vx, fighter.vy, fighter.vz,
-        target.vx, target.vy, target.vz))
-
+		-- NEU: Velocity debug
+		env.info(string.format("[DEBUG_VEL] F: vx=%.1f vy=%.1f vz=%.1f | T: vx=%.1f vy=%.1f vz=%.1f",
+			fighter.vx, fighter.vy, fighter.vz,
+			target.vx, target.vy, target.vz))
+	end
     return _gci.gci_compute_intercept(
         fighter.x, fighter.y, fighter.z, fighter.spd,
         fighter.vx, fighter.vy, fighter.vz,
@@ -189,4 +194,4 @@ function RedGCI.reset(callsign)
     RedGCI.releaseCtx(callsign)
 end
 
-env.info("[RedGCI] Mission-API bereit")
+env.info("[RedGCI] Mission-API loaded.")
