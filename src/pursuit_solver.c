@@ -64,6 +64,8 @@ float gci_closure_rate(const AircraftState *f, const AircraftState *t) {
 //    Da |Vf| fest und wir Richtung suchen:
 //    |d + w*t|² = |Vf|²*t²
 //    → quadratisch in t
+//
+//  Koordinatensystem: GCI intern (x=Ost, z=Nord, y=Höhe)
 // ─────────────────────────────────────────────────────────────
 
 bool gci_solve_collision(const AircraftState *f, const AircraftState *t,
@@ -105,10 +107,10 @@ bool gci_solve_collision(const AircraftState *f, const AircraftState *t,
 
     if (sol_t < 0.0f || sol_t > GCI_MAX_TTI) return false;
 
-    // Treffpunkt
+    // Treffpunkt — Look-Down Offset direkt hier addieren
     ip->x = t->pos.x + vtx * sol_t;
     ip->z = t->pos.z + vtz * sol_t;
-    ip->y = t->pos.y + t->vel.y * sol_t;
+    ip->y = t->pos.y + t->vel.y * sol_t + GCI_ALT_OFFSET_LOOKDOWN;
 
     // Kurs zum Treffpunkt
     *hdg = gci_bearing(ip->x - f->pos.x, ip->z - f->pos.z);
@@ -120,6 +122,7 @@ bool gci_solve_collision(const AircraftState *f, const AircraftState *t,
 // ─────────────────────────────────────────────────────────────
 //  LEAD PURSUIT
 //  Sinus-Regel: sin(lead) / |Vt| = sin(aspect_from_target) / |Vf|
+//  Fallback auf Pure Pursuit wenn Lead-Winkel > 45°
 // ─────────────────────────────────────────────────────────────
 
 void gci_solve_lead(const AircraftState *f, const AircraftState *t,
@@ -131,20 +134,17 @@ void gci_solve_lead(const AircraftState *f, const AircraftState *t,
 
     float base_bearing = gci_bearing(dx, dz);
 
-    // Aspect vom Ziel aus gesehen (umgekehrt)
-    AircraftState f_as_observer = *f;
-    float aspect_rad = gci_aspect_angle(t, f) * GCI_DEG2RAD;
+    float aspect_rad  = gci_aspect_angle(t, f) * GCI_DEG2RAD;
+    float speed_ratio = t->speed / (f->speed + 1e-6f);
+    float sin_lead    = GCI_CLAMP(speed_ratio * sinf(aspect_rad), -1.0f, 1.0f);
+    float lead_deg    = asinf(sin_lead) * GCI_RAD2DEG;
 
-    float speed_ratio = (t->speed) / (f->speed + 1e-6f);
-    float sin_lead = GCI_CLAMP(speed_ratio * sinf(aspect_rad), -1.0f, 1.0f);
-    float lead_deg = asinf(sin_lead) * GCI_RAD2DEG;
-    (void)f_as_observer;
-
-    /* Lead-Winkel nur anwenden wenn sinnvoll (<45°) */
+    // Lead-Winkel nur anwenden wenn sinnvoll (<45°)
+    // Bei großem Lead würde der GCI den Piloten in die falsche Richtung schicken
     if (fabsf(lead_deg) < 45.0f) {
         *hdg = fmodf(base_bearing + lead_deg + 360.0f, 360.0f);
     } else {
-        *hdg = base_bearing;  /* Fallback: direkt auf Ziel */
+        *hdg = base_bearing;   // Fallback: direkt auf Ziel
     }
 
     float closing = gci_closure_rate(f, t);
@@ -169,6 +169,17 @@ void gci_solve_pure(const AircraftState *f, const AircraftState *t,
 
 // ─────────────────────────────────────────────────────────────
 //  HAUPT-API: Wählt optimale Methode, WP-Doktrin-Logik
+//
+//  Koordinaten-Konvention (GCI intern):
+//    x = Ost, z = Nord, y = Höhe
+//
+//  Mapping von DCS (Eingabe via gci_lua.c):
+//    DCS x (Nord) → GCI z
+//    DCS y (Höhe) → GCI y
+//    DCS z (Ost)  → GCI x
+//
+//  Rückgabe intercept_point ebenfalls in GCI-Koordinaten.
+//  Rücktausch nach DCS erfolgt in gci_lua.c.
 // ─────────────────────────────────────────────────────────────
 
 InterceptSolution gci_compute_intercept(const AircraftState *f,
@@ -181,15 +192,12 @@ InterceptSolution gci_compute_intercept(const AircraftState *f,
     sol.range        = gci_vec2_len(dx, dz);
     sol.aspect_angle = gci_aspect_angle(t, f);
 
-    // WP-Doktrin: MiG-29 wird leicht über Ziel geführt (Look-Down)
-    // Intercept-Höhe = Zielhöhe + 700m
-    sol.intercept_point.y = t->pos.y + GCI_ALT_OFFSET_LOOKDOWN;
-
     // Waffenfreigabe: Heckaspekt UND innerhalb R-27 Reichweite
     sol.weapons_free = (sol.aspect_angle > GCI_ASPECT_REAR_ATTACK)
                     && (sol.range < GCI_WF_RANGE_MAX);
 
     // Versuch 1: Collision Course (optimal)
+    // intercept_point inkl. Look-Down Offset wird in gci_solve_collision gesetzt
     if (gci_solve_collision(f, t,
                             &sol.heading_deg,
                             &sol.time_to_intercept,
@@ -200,18 +208,16 @@ InterceptSolution gci_compute_intercept(const AircraftState *f,
     }
 
     // Versuch 2: Lead Pursuit (Jäger etwas zu langsam)
-// Versuch 2: Lead Pursuit (Jäger etwas zu langsam)
     gci_solve_lead(f, t, &sol.heading_deg, &sol.time_to_intercept);
     sol.solution_found = true;
     sol.mode = PURSUIT_LEAD;
 
-    /* Intercept-Punkt approximieren — wird von gci_solve_lead nicht gesetzt */
+    // Intercept-Punkt approximieren: Zielposition + Velocity × TTI
+    // Look-Down Offset direkt hier addieren
     sol.intercept_point.x = t->pos.x + t->vel.x * sol.time_to_intercept;
     sol.intercept_point.z = t->pos.z + t->vel.z * sol.time_to_intercept;
-    /* .y bereits gesetzt: t->pos.y + GCI_ALT_OFFSET_LOOKDOWN */
+    sol.intercept_point.y = t->pos.y + t->vel.y * sol.time_to_intercept
+                            + GCI_ALT_OFFSET_LOOKDOWN;
 
-    // Pure Pursuit wird vom GCI nie ausgegeben —
-    // bei fehlender Lösung würde er "Цель визуально" sagen
-    // und den Piloten selbst handeln lassen.
     return sol;
 }
