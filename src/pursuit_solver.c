@@ -111,6 +111,8 @@ bool gci_solve_collision(const AircraftState *f, const AircraftState *t,
     ip->x = t->pos.x + vtx * sol_t;
     ip->z = t->pos.z + vtz * sol_t;
     ip->y = t->pos.y + t->vel.y * sol_t + GCI_ALT_OFFSET_LOOKDOWN;
+    /* Mindesthöhe 300m — verhindert negative WP-Höhe wenn Ziel sinkt */
+    if (ip->y < 300.0f) ip->y = 300.0f;
 
     // Kurs zum Treffpunkt
     *hdg = gci_bearing(ip->x - f->pos.x, ip->z - f->pos.z);
