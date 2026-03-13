@@ -59,7 +59,7 @@ end
 RedGCI.FIGHTER_GROUP  = RedGCI.FIGHTER_GROUP  or "Mig-29A"
 RedGCI.TARGET_GROUP   = RedGCI.TARGET_GROUP   or "Target"
 RedGCI.CALLSIGN       = RedGCI.CALLSIGN       or "Сокол-1"
-RedGCI.TICK_INTERVAL  = RedGCI.TICK_INTERVAL  or 5.0
+RedGCI.TICK_INTERVAL  = RedGCI.TICK_INTERVAL  or 10.0
 RedGCI.SUBTITLE_TIME  = RedGCI.SUBTITLE_TIME  or 8
 RedGCI.COALITION      = RedGCI.COALITION      or 1   -- 1=RED
 RedGCI.DEBUG          = RedGCI.DEBUG          or false
@@ -130,13 +130,26 @@ function RedGCI.releaseCtx(callsign)
     end
 end
 
--- Wrapper: Intercept berechnen
 function RedGCI.computeIntercept(fighter, target)
+    -- DEBUG
+    local dx = target.x - fighter.x
+    local dz = target.z - fighter.z
+    env.info(string.format("[DEBUG] F: x=%.0f y=%.0f z=%.0f spd=%.0f | T: x=%.0f y=%.0f z=%.0f | dx=%.0f dz=%.0f | raw_bearing=%.0f",
+        fighter.x, fighter.y, fighter.z, fighter.spd,
+        target.x, target.y, target.z,
+        dx, dz,
+        math.deg(math.atan2(dz, dx)) % 360))
+
+    -- NEU: Velocity debug
+    env.info(string.format("[DEBUG_VEL] F: vx=%.1f vy=%.1f vz=%.1f | T: vx=%.1f vy=%.1f vz=%.1f",
+        fighter.vx, fighter.vy, fighter.vz,
+        target.vx, target.vy, target.vz))
+
     return _gci.gci_compute_intercept(
-        fighter.x,   fighter.z,   fighter.y,   fighter.spd,
-        fighter.vx,  fighter.vz,  fighter.vy,
-        target.x,    target.z,    target.y,    target.spd,
-        target.vx,   target.vz,   target.vy)
+        fighter.x, fighter.y, fighter.z, fighter.spd,
+        fighter.vx, fighter.vy, fighter.vz,
+        target.x,  target.y,  target.z,  target.spd,
+        target.vx, target.vy, target.vz)
 end
 
 -- Wrapper: FSM-State aktualisieren
@@ -150,12 +163,17 @@ function RedGCI.fsmUpdate(callsign, range, aspect, closure, alt_delta, fuel,
                            threat or false)
 end
 
--- Wrapper: Transmission bauen
-function RedGCI.buildTransmission(callsign, hdg, tti, mode, wf, ip_x, ip_z, ip_y)
+-- buildTransmission: übergibt jetzt auch target_alt (arg 10)
+-- Rückgabe: silence, token_str, weapons_free, delay  (4 statt 5)
+function RedGCI.buildTransmission(callsign, hdg, tti, mode, wf,
+                                   ip_x, ip_z, ip_y, target_alt)
     local id = RedGCI.getCtxId(callsign)
-    if not id then return true, "", "", false, 3.0 end
-    return _gci.gci_fsm_transmission(id, callsign, hdg, tti, mode, wf,
-                                 ip_x or 0, ip_z or 0, ip_y or 0)
+    if not id then return true, "", false, 3.0 end
+    return _gci.gci_fsm_transmission(
+        id, callsign,
+        hdg, tti, mode, wf,
+        ip_x or 0, ip_z or 0, ip_y or 0,
+        target_alt or 0)
 end
 
 -- Wrapper: Merge aktualisieren
