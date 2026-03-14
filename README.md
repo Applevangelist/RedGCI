@@ -20,14 +20,15 @@ RedGCI provides authentic GCI (Наземный пункт наведения) b
 - Multilingual voice output via MSRS (English, German, Russian)
 - Token-based localisation — strings fully decoupled from C logic
 - AI and human pilot modes
+- Up to 8 simultaneous intercept contexts
 
 ---
 
 ## Architecture
 
 ```
-DCS.exe → MissionScripting.lua (dofile hook)
-  └── gci_mission.lua          (DCS mission sandbox wrapper)
+DCS.exe → MissionScripting.lua (dofile hook, pre-sanitizer)
+  └── gci_mission.lua          (DCS pre-sandbox loader, loads RedGCI.dll)
         └── RedGCI.dll          (luaopen_RedGCI, Lua 5.1)
               └── gci_core.lib  (C11 tactics core)
                     ├── pursuit_solver.c
@@ -36,13 +37,13 @@ DCS.exe → MissionScripting.lua (dofile hook)
                     └── message_handler.c
 
 gci_bridge.lua                  (MOOSE mission script, full DCS API access)
-  ├── gci_messages.lua          (localised string table en/de/ru)
-  └── gci_tokens.lua            (token parser + MSRS output)
+  ├── RedGCI.Messages{}         (localised string table en/de/ru, inline)
+  └── RedGCI.Transmit()         (token parser + MSRS output, inline)
 ```
 
 ### Coordinate System
 
-DCS `getPoint()` / `getVelocity()` mapping to GCI internal:
+DCS `getPosition()` / `getVelocity()` mapping to GCI internal:
 
 | DCS | Meaning | GCI internal |
 |-----|---------|--------------|
@@ -57,7 +58,7 @@ DCS `getPoint()` / `getVelocity()` mapping to GCI internal:
 - **DCS World** (OpenBeta or Stable)
 - **MOOSE** framework
 - **SRS** (SimpleRadioStandalone) + **MSRS** MOOSE module
-- **CMake** ≥ 3.20 (build)
+- **CMake** ≥ 3.16 (build)
 - **MSVC** or **GCC** C11 compiler
 
 ---
@@ -65,7 +66,7 @@ DCS `getPoint()` / `getVelocity()` mapping to GCI internal:
 ## Building
 
 ```bash
-git clone https://github.com/yourname/RedGCI
+git clone https://github.com/Applevangelist/RedGCI
 cd RedGCI
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
@@ -73,49 +74,70 @@ cmake --build build --config Release
 
 Output: `build/Release/RedGCI.dll` + `build/Release/gci_core.lib`
 
-Copy `RedGCI.dll` to your DCS mission scripts folder or a path accessible from `MissionScripting.lua`.
+For the DLL (Windows only), provide the Lua 5.1 headers and import library from your DCS installation:
+
+```cmd
+cmake -B build -DCMAKE_BUILD_TYPE=Release ^
+  -DLUA51_LIB="C:\DCS\bin\lua51.lib" ^
+  -DLUA51_INCLUDE="C:\DCS\LuaSocket\include"
+cmake --build build --config Release
+```
 
 ---
 
 ## Installation
 
-### 1. DLL loading
+### 1. File layout
 
-In `MissionScripting.lua` (or via dofile-Hook):
+Copy files to your DCS Saved Games folder:
 
-```lua
-package.cpath = package.cpath .. ";C:/path/to/RedGCI/?.dll"
-local _gci = require("RedGCI")
+```
+%USERPROFILE%\Saved Games\DCS\
+  Mods\Services\RedGCI\
+    bin\RedGCI.dll
+    Scripts\gci_mission.lua
+  Config\RedGCI.lua          (optional — overrides defaults)
 ```
 
-### 2. Mission Script
+### 2. MissionScripting.lua hook
 
-Load the following in order in your mission trigger (ONCE, on mission start):
+Add the following line to `MissionScripting.lua` **before** the `sanitizeModule()` calls:
 
 ```lua
-dofile("gci_messages.lua")   -- string table
-dofile("gci_tokens.lua")     -- token parser + MSRS
-dofile("gci_mission.lua")    -- C-core wrapper functions
-dofile("gci_bridge.lua")     -- main tick loop + DCS integration
+dofile(lfs.writedir()..[[Mods\Services\RedGCI\Scripts\gci_mission.lua]])
 ```
 
-### 3. Konfiguration
+> **Note:** `MissionScripting.lua` is overwritten by DCS updates — re-apply after every DCS update.
 
-At the top of `gci_bridge.lua`, set your mission parameters:
+### 3. Mission Script
+
+Load `gci_bridge.lua` in your mission via a **ONCE / MISSION START** trigger:
+
+```
+Trigger → MISSION START → DO SCRIPT FILE → gci_bridge.lua
+```
+
+### 4. Configuration
+
+Optional: create `%USERPROFILE%\Saved Games\DCS\Config\RedGCI.lua` (evaluated inside the `RedGCI` namespace):
 
 ```lua
-RedGCI.FIGHTER_GROUP = "Sokol-1"         -- DCS group name
-RedGCI.TARGET_GROUP  = "Bogey-1"         -- DCS group name
-RedGCI.CALLSIGN      = "Сокол-1"         -- voice callsign
-RedGCI.LOCALE        = "ru"              -- "en" | "de" | "ru"
-RedGCI.IS_AI_PLANE   = true              -- false = human pilot
-RedGCI.COALITION     = coalition.side.RED
-RedGCI.TICK_INTERVAL = 10               -- seconds
+FIGHTER_GROUP = "Mig-29A"          -- DCS group name
+TARGET_GROUP  = "Target"           -- DCS group name
+CALLSIGN      = "Сокол-1"         -- voice callsign
+LOCALE        = "de"               -- "en" | "de" | "ru"
+IS_AI_PLANE   = true               -- false = human pilot
+COALITION     = 1                  -- 1=RED
+TICK_INTERVAL = 10                 -- seconds
+DEBUG         = false
+```
 
-RedGCI.HOME_BASE = { x = -125000, z = 759000 }  -- DCS coords
+Alternatively, edit the defaults at the top of `gci_bridge.lua` directly.
 
-local path    = "C:/path/to/SRS"
-local culture = "de-DE"
+The home airbase is set in `gci_bridge.lua`:
+
+```lua
+RedGCI.HOMEBASENAME = AIRBASE.Caucasus.Nalchik
 ```
 
 ---
@@ -124,11 +146,11 @@ local culture = "de-DE"
 
 | State | Trigger | Radar | Waypoints |
 |-------|---------|-------|-----------|
-| `VECTOR` | Range > 30km | OFF | Rolling, every tick |
-| `COMMIT` | Range < 30km | ON | Rolling to intercept point |
+| `VECTOR` | Range > 30 km | OFF | Rolling, every tick |
+| `COMMIT` | Range < 30 km | ON | Rolling to intercept point |
 | `RADAR_CONTACT` | Pilot has lock | ON | Rolling to intercept point |
-| `VISUAL` | Range < 5km | ON | — |
-| `MERGE` | Range < 2km | ON | — |
+| `VISUAL` | Range < 5 km | ON | — |
+| `MERGE` | Range < 2 km | ON | — |
 | `NOTCH` | Aspect 80–100° | OFF | Hold |
 | `ABORT` | Threat / Bingo fuel | OFF | RTB heading |
 | `RTB` | Mission complete | OFF | Home base |
@@ -143,7 +165,7 @@ Three modes, selected automatically:
 - **LEAD** — bearing + lead angle fallback when closure is insufficient
 - **PURE** — pure pursuit of last resort
 
-TTI is capped at 600s. Minimum closing speed floor: 50 m/s.
+TTI is capped at 600 s. Minimum closing speed floor: 50 m/s.
 
 ---
 
@@ -153,25 +175,33 @@ The C core returns structured token strings instead of free text:
 
 ```
 "VECTOR|hdg=165|alt=4900|rng=32|tti_m=8|delay=5.2"
+"VECTOR_WITH_TTI|hdg=112|alt=4900|rng=28|tti_m=6|delay=4.1"
 "COMMIT_FIRST|hdg=112|alt=4900|rng=28|aspect=033|delay=4.1"
+"COMMIT_NUDGE|delay=2.0"
+"RADAR_LOCK_WF|rng=23|delay=3.8"
 "RADAR_LOCK_HOLD|rng=23|delay=3.8"
+"NOTCH_ENTRY|delay=3.0"
 "MERGE_ENTRY|brg=324|dir_rl=left|delay=2.1"
+"MERGE_SPLASH|delay=1.5"
+"ABORT_BINGO|hdg=270|delay=2.0"
 ```
 
-Lua parses these, looks up the localised template in `gci_messages.lua` via `TEXTANDSOUND:GetEntry()`, fills `{PLACEHOLDER}` values with `gsub`, and sends the result to `MSRSQUEUE:NewTransmission()`.
+`gci_bridge.lua` parses these, looks up the localised template in `RedGCI.Messages` via key, fills `{PLACEHOLDER}` values with `gsub`, and sends the result to `MSRSQUEUE:NewTransmission()`.
 
-Repeated identical transmissions are suppressed for 30 seconds.
+Repeated identical transmissions are suppressed for 30 seconds (`TX_REPEAT_INTERVAL`).
 
 ---
 
 ## Localisation
 
-Add or modify strings in `gci_messages.lua`:
+Add or modify strings in the `RedGCI.Messages` table in `gci_bridge.lua`:
 
 ```lua
 RedGCI.Messages = {
     en = {
-        VECTOR = "{CALLSIGN}, VECTOR {HDG}, altitude {ALT} meters, 900 kph.",
+        VECTOR          = "{CALLSIGN}, VECTOR {HDG}, altitude {ALT} meters, 900 kph.",
+        VECTOR_WITH_TTI = "{CALLSIGN}, VECTOR {HDG}, altitude {ALT} meters, 900 kph. Target in {TTI_M} minutes.",
+        COMMIT_FIRST    = "{CALLSIGN}, BOGEY ahead, {RNG} kilometers, altitude {ALT} meters. Search radar. Look.",
         -- ...
     },
     de = { ... },
@@ -179,7 +209,9 @@ RedGCI.Messages = {
 }
 ```
 
-Available placeholders: `{CALLSIGN}` `{HDG}` `{ALT}` `{RNG}` `{TTI_M}` `{BRG}` `{ASPECT}` `{DIR_LR}` `{DIR_RL}` `{ALT_REL}`
+Available placeholders: `{CALLSIGN}` `{HDG}` `{ALT}` `{RNG}` `{TTI_M}` `{TTI_S}` `{ASPECT}` `{DIR_LR}` `{DIR_RL}`
+
+Direction tokens (`{DIR_LR}`, `{DIR_RL}`) are resolved per locale from `RedGCI.DirTokens` and passed into `RedGCI.Transmit()` from `gci_bridge.lua`.
 
 ---
 
@@ -198,6 +230,21 @@ Available placeholders: `{CALLSIGN}` `{HDG}` `{ALT}` `{RNG}` `{TTI_M}` `{BRG}` `
 
 ---
 
+## F10 Menu
+
+`gci_bridge.lua` registers a **GCI** sub-menu for the RED coalition with the following commands:
+
+| Command | Action |
+|---------|--------|
+| Radar Lock | Pilot confirms radar lock (pilot_flags.radar = true) |
+| Visual Contact | Pilot confirms visual (pilot_flags.visual = true) |
+| Threat (RWR) | Pilot reports threat (pilot_flags.threat = true) |
+| Splash / Kill | Trigger MERGE_SPLASH, reset GCI state |
+| Reset GCI | Full state reset, radar off |
+| Toggle AI Mode | Switch between AI waypoint control and human pilot mode |
+
+---
+
 ## Project Status
 
 | Phase | Status |
@@ -210,7 +257,7 @@ Available placeholders: `{CALLSIGN}` `{HDG}` `{ALT}` `{RNG}` `{TTI_M}` `{BRG}` `
 
 ---
 
-## Licens
+## License
 
 GPL 2.0 — see [LICENSE](LICENSE)
 
