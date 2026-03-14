@@ -336,7 +336,7 @@ local function push_waypoint(group_name, wx, wz, wy, speed_mps, land_home)
     local speed_kph = UTILS.MpsToKmph(speed_mps)
     local grp = GROUP:FindByName(group_name)
     local altitude = grp:GetAltitude()
-    local speed_tas = UTILS.IasToTas(speed_kph,altitude)
+    local speed_tas = UTILS.IasToTas(speed_kph,math.max(wy, altitude))
     
     env.info(string.format("[DEBUG_SPEED] Speed = %dmps | IAS = %dkph | TAS = %dkph",speed_mps,speed_kph,speed_tas))
     
