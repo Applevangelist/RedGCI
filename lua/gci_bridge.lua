@@ -416,6 +416,7 @@ local pilot_flags = {
 }
 
 local prev_state = nil
+local prev_wf    = false
 
 -- ──────────────────────────────────────────────────────────────
 --  Haupt-Tick
@@ -485,7 +486,10 @@ local function gci_tick(_, now)
     if state ~= prev_state then
         gci_log("State: " .. (prev_state or "START") .. " → " .. state)
 
-        if state == "ABORT" or state == "RTB" then
+        if state == "COMMIT" then
+            RedGCI.Transmit("RADAR_ON|delay=1.5",
+                            RedGCI.CALLSIGN, RedGCI.LOCALE, nil, nil)
+        elseif state == "ABORT" or state == "RTB" then
             set_radar(RedGCI.FIGHTER_GROUP, false)
             if RedGCI.HOME_BASE then
                 push_waypoint(RedGCI.FIGHTER_GROUP,
@@ -550,6 +554,13 @@ local function gci_tick(_, now)
         RedGCI.Transmit(token_str, RedGCI.CALLSIGN,
                         RedGCI.LOCALE, dir_lr, dir_rl)
     end
+
+    -- Weapons free edge: fire once when wf first becomes true
+    if weapons_free and not prev_wf then
+        RedGCI.Transmit("WEAPONS_FREE|delay=1.0",
+                        RedGCI.CALLSIGN, RedGCI.LOCALE, nil, nil)
+    end
+    prev_wf = weapons_free or false
 
     gci_log(string.format(
         "[%s] HDG:%d TTI:%ds MODE:%s WF:%s RANGE:%.0fm ASPECT:%.1f° → %s",
