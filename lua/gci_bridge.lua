@@ -54,9 +54,12 @@ RedGCI.TICK_INTERVAL  = 10
 RedGCI.SUBTITLE_TIME  = 8
 RedGCI.COALITION      = 1   -- 1=RED
 RedGCI.DEBUG          = true
+RedGCI.SRSFREQUENCY   = 124
+
 -- Locale-Einstellung (einmalig beim Start setzen)
 RedGCI.LOCALE = "de"   -- "en" | "de" | "ru"
-RedGCI.TX_REPEAT_INTERVAL = 30.0  -- Sekunden bis Wiederholung
+RedGCI.TX_REPEAT_INTERVAL = 30.0  -- Sekunden bis Wiederholung desselben Calls
+RedGCI.VectorCallGap = 20.0 -- Mindest Sekunden zwischen VECTOR-Calls, so dass wir nicht ständig Funkverkehr hören
 
 -- Wegpunkt-Lookahead: WP wird auf diesen Faktor × speed × tick geclampt
 -- 1.5 = AI bekommt Wegpunkt 1.5 Ticks voraus — verhindert Überschießen
@@ -329,6 +332,11 @@ end
 -- ──────────────────────────────────────────────────────────────
 
 local function push_waypoint(group_name, wx, wz, wy, speed_mps, land_home)
+    
+    local speed_kph = UTILS.MpsToKmph(speed_mps)
+    
+    env.info(string.format("[DEBUG_SPEED] Speed = %dmps | Speed = %dkph",speed_mps,speed_kph))
+    
     if not RedGCI.IS_AI_PLANE then return end
     
     local minheight = land.getHeight( {x=wx,y=wz} ) + 300 
@@ -336,21 +344,21 @@ local function push_waypoint(group_name, wx, wz, wy, speed_mps, land_home)
     local route = {}
     local grp = GROUP:FindByName(group_name)
     local tsk = grp:TaskAerobatics()
-    tsk = grp:TaskAerobaticsStraightFlight(tsk,1,math.max(wy, minheight), UTILS.MpsToKmph(speed_mps),UseSmoke,StartImmediately,10)
+    tsk = grp:TaskAerobaticsStraightFlight(tsk,1,math.max(wy, minheight),speed_kph,UseSmoke,StartImmediately,10)
     local startpoint = grp:GetCoordinate()
     local wp0 = startpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.TurningPoint,COORDINATE.WaypointAction.FlyoverPoint,
-      UTILS.MpsToKmph(speed_mps),true,airbase,DCSTasks,"VECTOR")    
+      speed_kph,true,airbase,DCSTasks,"VECTOR")    
   
     local endpoint = COORDINATE:New(wx,math.max(wy, minheight),wz)
-    endpoint:MarkToAll("Vector",ReadOnly,"Vector")
+    --endpoint:MarkToAll("Vector",ReadOnly,"Vector")
     
     local wp1
     if land_home == true then
       wp1 = endpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.Land,COORDINATE.WaypointAction.Landing,
-      UTILS.MpsToKmph(speed_mps),true,RedGCI.AIRBASE,DCSTasks,"HOME")
+      speed_kph,true,RedGCI.AIRBASE,DCSTasks,"HOME")
     else
       wp1 = endpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.TurningPoint,COORDINATE.WaypointAction.FlyoverPoint,
-      UTILS.MpsToKmph(speed_mps),true,airbase,DCSTasks,"VECTOR")
+      speed_kph,true,airbase,DCSTasks,"VECTOR")
     end
     table.insert(route,wp0)
     table.insert(route,wp1) 
@@ -402,10 +410,12 @@ local function set_radar(group_name, on)
       grp:SetOptionRadarUsingForContinousSearch()
       grp:OptionROEWeaponFree()
       grp:OptionAlarmStateRed()
+      grp:OptionAAAttackRange(1)
     else
       grp:SetOptionRadarUsingNever()
       grp:OptionROEHoldFire()
       grp:OptionAlarmStateAuto()
+      grp:OptionAAAttackRange(3)
     end
 
     gci_log("Radar " .. (on and "AN" or "AUS"))
@@ -554,14 +564,19 @@ local function gci_tick(_, now)
             t.y)   -- target_alt = echte Zielhöhe ohne Offset
 
     if not silence then
-        local skip_vector = state == "VECTOR" and (now - last_vector_tx) < 20
+        local skip_vector = false
+        if state == "VECTOR" and (timer.getTime() - last_vector_tx) < RedGCI.VectorCallGap then
+          skip_vector = true
+        end
+        --local skip_vector = (state == "VECTOR" and (timer.getTime() - last_vector_tx) > RedGCI.VectorCallGap) and true or false
+        env.info(string.format("[DEBUG] state=%s | skip=%s | token=%s",state,tostring(skip_vector),token_str))
         if not skip_vector then
             local dir_lr = derive_dir_lr(aspect)
             local dir_rl = derive_dir_rl(f, t)
             RedGCI.Transmit(token_str, RedGCI.CALLSIGN,
                             RedGCI.LOCALE, dir_lr, dir_rl)
             if state == "VECTOR" then
-                last_vector_tx = now
+                last_vector_tx = timer.getTime()
             end
         end
     end
@@ -654,7 +669,7 @@ end
 local function GCI_init()
     
     RedGCI.InitLocalization()
-    RedGCI.InitSRS(path, 251, radio.modulation.AM, culture, MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
+    RedGCI.InitSRS(path, RedGCI.SRSFREQUENCY or 124, radio.modulation.AM, culture, MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
     
     RedGCI.getCtxId(RedGCI.CALLSIGN)
     setup_f10_menu()
