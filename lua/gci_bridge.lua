@@ -38,18 +38,15 @@ end
 --  Konfiguration
 -- ──────────────────────────────────────────────────────────────
 
--- AI-Steuerung: true = Bridge pusht Wegpunkte und schaltet Radar
--- Kann auch in Config\RedGCI.lua gesetzt werden:
---   RedGCI.IS_AI_PLANE = true
---   RedGCI.HOME_BASE   = { x = -125000, z = 760000 }
-RedGCI.IS_AI_PLANE = true --RedGCI.IS_AI_PLANE or false
-RedGCI.HOMEBASENAME = AIRBASE.Caucasus.Nalchik
-RedGCI.HOME_BASE   = AIRBASE:FindByName(RedGCI.HOMEBASENAME):GetVec2() --RedGCI.HOME_BASE   or nil
-RedGCI.DEBUG = true
-
 -- ──────────────────────────────────────────────────────────────
 --  Standardwerte (nach Config-Load, or-Pattern)
--- ──────────────────────────────────────────────────────────────
+-- ────────────────────────────────────────────────────────────── 
+
+RedGCI.IS_AI_PLANE = true --RedGCI.IS_AI_PLANE or false
+RedGCI.HOMEBASENAME = AIRBASE.Caucasus.Nalchik
+RedGCI.DEBUG = true
+RedGCI.AIRBASE = AIRBASE:FindByName(RedGCI.HOMEBASENAME)
+RedGCI.HOME_BASE   = RedGCI.AIRBASE:GetVec2() --RedGCI.HOME_BASE   or nil
 RedGCI.FIGHTER_GROUP  = "Mig-29A"
 RedGCI.TARGET_GROUP   = "Target"
 RedGCI.CALLSIGN       = "Сокол-1"
@@ -206,7 +203,7 @@ function RedGCI.Transmit(token_str, callsign, locale, dir_lr, dir_rl)
             RedGCI.msrs,    -- MSRS Instanz
             delay,          -- Startverzögerung
             2,              -- Priorität
-            nil,            -- Subgroups (Subtitel)
+            {GROUP:FindByName(RedGCI.FIGHTER_GROUP)},            -- Subgroups (Subtitel)
             text,           -- Subtitle
             10,             -- Subtitle-Dauer
             nil, nil,       -- Channel/Mod (aus msrs)
@@ -217,6 +214,9 @@ function RedGCI.Transmit(token_str, callsign, locale, dir_lr, dir_rl)
     else
         -- Fallback: nur Textausgabe
         trigger.action.outText(text, 8, false)
+    end
+    if RedGCI.DEBUG == true then
+      MESSAGE:New("[DEBUG_MESSAGES] "..text,8):ToAll():ToLog()
     end
 end
 
@@ -327,17 +327,15 @@ local function push_waypoint(group_name, wx, wz, wy, speed_mps, land_home)
     tsk = grp:TaskAerobaticsStraightFlight(tsk,1,math.max(wy, minheight), UTILS.MpsToKmph(speed_mps),UseSmoke,StartImmediately,10)
     local startpoint = grp:GetCoordinate()
     local wp0 = startpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.TurningPoint,COORDINATE.WaypointAction.FlyoverPoint,
-      UTILS.MpsToKmph(speed_mps),true,airbase,DCSTasks,"VECTOR")
-    
-
-    
+      UTILS.MpsToKmph(speed_mps),true,airbase,DCSTasks,"VECTOR")    
+  
     local endpoint = COORDINATE:New(wx,math.max(wy, minheight),wz)
     endpoint:MarkToAll("Vector",ReadOnly,"Vector")
     
     local wp1
     if land_home == true then
       wp1 = endpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.Land,COORDINATE.WaypointAction.Landing,
-      UTILS.MpsToKmph(speed_mps),true,AIRBASE:FindByName(RedGCI.HOMEBASENAME),DCSTasks,"HOME")
+      UTILS.MpsToKmph(speed_mps),true,RedGCI.AIRBASE,DCSTasks,"HOME")
     else
       wp1 = endpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.TurningPoint,COORDINATE.WaypointAction.FlyoverPoint,
       UTILS.MpsToKmph(speed_mps),true,airbase,DCSTasks,"VECTOR")
@@ -393,15 +391,7 @@ local function set_radar(group_name, on)
     else
       grp:SetOptionRadarUsingNever()
     end
-    
-   -- local grp = Group.getByName(group_name)
-    --if not grp then return end
 
-    --for _, u in ipairs(grp:getUnits()) do
-      --  if u and u:isExist() then
-        --    u:enableEmission(on)
-        --end
-    --end
     gci_log("Radar " .. (on and "AN" or "AUS"))
 end
 
@@ -433,12 +423,10 @@ local function gci_tick(_, now)
     if not t then
         gci_log("Ziel '" .. RedGCI.TARGET_GROUP .. "' nicht gefunden — Mission beendet")
         set_radar(RedGCI.FIGHTER_GROUP, false)
-        RedGCI.Transmit("MERGE_SPLASH|delay=1.5",
-                        RedGCI.CALLSIGN, RedGCI.LOCALE, nil, nil)
-        trigger.action.outTextForCoalition(
-            RedGCI.COALITION, "[GCI] Зона чистая.", 10)
+        RedGCI.Transmit("MERGE_SPLASH|delay=1.5",RedGCI.CALLSIGN, RedGCI.LOCALE, nil, nil)
+        trigger.action.outTextForCoalition(RedGCI.COALITION, "[GCI] Зона чистая.", 10)
         
-       push_waypoint(RedGCI.FIGHTER_GROUP, RedGCI.HOME_BASE.x, 0, RedGCI.HOME_BASE.y, 200, true)    
+        push_waypoint(RedGCI.FIGHTER_GROUP, RedGCI.HOME_BASE.x, 0, RedGCI.HOME_BASE.y, 200, true)    
         
         return nil  -- Timer stoppen
     end
