@@ -129,6 +129,7 @@ endif()
 
 # ── Lua-Dateien ins Build-Verzeichnis ─────────────────────────
 configure_file(lua/Export.lua        ${CMAKE_BINARY_DIR}/Export.lua        COPYONLY)
+configure_file(lua/gci_messages.lua  ${CMAKE_BINARY_DIR}/gci_messages.lua  COPYONLY)
 configure_file(lua/gci_bridge.lua    ${CMAKE_BINARY_DIR}/gci_bridge.lua    COPYONLY)
 if(EXISTS "${CMAKE_SOURCE_DIR}/lua/gci_mission.lua")
     configure_file(lua/gci_mission.lua  ${CMAKE_BINARY_DIR}/gci_mission.lua  COPYONLY)

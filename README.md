@@ -37,8 +37,8 @@ DCS.exe → MissionScripting.lua (dofile hook, pre-sanitizer)
                     └── message_handler.c
 
 gci_bridge.lua                  (MOOSE mission script, full DCS API access)
-  ├── RedGCI.Messages{}         (localised string table en/de/ru, inline)
-  └── RedGCI.Transmit()         (token parser + MSRS output, inline)
+  ├── gci_messages.lua          (localised string table en/de/ru + DirTokens)
+  └── RedGCI.Transmit()         (token parser + MSRS output)
 ```
 
 ### Coordinate System
@@ -111,11 +111,14 @@ dofile(lfs.writedir()..[[Mods\Services\RedGCI\Scripts\gci_mission.lua]])
 
 ### 3. Mission Script
 
-Load `gci_bridge.lua` in your mission via a **ONCE / MISSION START** trigger:
+Load the following files **in order** via **ONCE / MISSION START** triggers:
 
 ```
+Trigger → MISSION START → DO SCRIPT FILE → gci_messages.lua
 Trigger → MISSION START → DO SCRIPT FILE → gci_bridge.lua
 ```
+
+`gci_messages.lua` must be loaded first — it populates `RedGCI.Messages` and `RedGCI.DirTokens` which `gci_bridge.lua` requires.
 
 ### 4. Configuration
 
@@ -194,7 +197,7 @@ Repeated identical transmissions are suppressed for 30 seconds (`TX_REPEAT_INTER
 
 ## Localisation
 
-Add or modify strings in the `RedGCI.Messages` table in `gci_bridge.lua`:
+Add or modify strings in `gci_messages.lua`:
 
 ```lua
 RedGCI.Messages = {
