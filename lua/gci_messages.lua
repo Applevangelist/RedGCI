@@ -53,6 +53,11 @@ RedGCI.Messages = {
         MERGE_SEPARATION    = "{CALLSIGN}, separate. Climb and reset.",
         MERGE_REATTACK      = "{CALLSIGN}, reattack. Target {DIR_RL}.",
         MERGE_LOST          = "{CALLSIGN}, BLIND. Reset heading {HDG}.",
+        MERGE_SPLASH        = "{CALLSIGN}, good kill. Return to base.",
+
+        -- STATE TRANSITIONS
+        RADAR_ON            = "{CALLSIGN}, radar on. Search.",
+        WEAPONS_FREE        = "{CALLSIGN}, WEAPONS FREE.",
     },
 
     -- ── DEUTSCH ──────────────────────────────────────────────
@@ -88,6 +93,11 @@ RedGCI.Messages = {
         MERGE_SEPARATION    = "{CALLSIGN}, trennen. Steigen und neu ansetzen.",
         MERGE_REATTACK      = "{CALLSIGN}, neu angreifen. Ziel {DIR_RL}.",
         MERGE_LOST          = "{CALLSIGN}, BLIND. Kurs {HDG}.",
+        MERGE_SPLASH        = "{CALLSIGN}, Treffer bestätigt. Kurs nach Hause.",
+
+        -- STATE TRANSITIONS
+        RADAR_ON            = "{CALLSIGN}, Radar an. Such.",
+        WEAPONS_FREE        = "{CALLSIGN}, Waffe frei.",
     },
 
     -- ── RUSSISCH ─────────────────────────────────────────────
@@ -123,6 +133,11 @@ RedGCI.Messages = {
         MERGE_SEPARATION    = "{CALLSIGN}, выход. Набери высоту и повтори.",
         MERGE_REATTACK      = "{CALLSIGN}, повторная атака. Цель {DIR_RL}.",
         MERGE_LOST          = "{CALLSIGN}, потеря контакта. Курс {HDG}.",
+        MERGE_SPLASH        = "{CALLSIGN}, молодец. Курс домой.",
+
+        -- STATE TRANSITIONS
+        RADAR_ON            = "{CALLSIGN}, включи локатор.",
+        WEAPONS_FREE        = "{CALLSIGN}, цель разрешена.",
     },
 }
 
