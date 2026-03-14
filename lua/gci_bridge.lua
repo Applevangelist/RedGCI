@@ -126,7 +126,7 @@ end
 -- ── 4. gsub Platzhalter füllen ────────────────────────────────
 --  Ersetzt {KEY} im Template mit Werten aus der vars-Tabelle
 local function fill_template(template, vars)
-    return (string.gsub(template, "{(%w+)}", function(key)
+    return (string.gsub(template, "{([%w_]+)}", function(key)
         return tostring(vars[key] or "")
     end))
 end
