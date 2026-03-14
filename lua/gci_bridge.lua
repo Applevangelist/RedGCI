@@ -334,20 +334,23 @@ end
 local function push_waypoint(group_name, wx, wz, wy, speed_mps, land_home)
     
     local speed_kph = UTILS.MpsToKmph(speed_mps)
+    local grp = GROUP:FindByName(group_name)
+    local altitude = grp:GetAltitude()
+    local speed_tas = UTILS.IasToTas(speed_kph,altitude)
     
-    env.info(string.format("[DEBUG_SPEED] Speed = %dmps | Speed = %dkph",speed_mps,speed_kph))
+    env.info(string.format("[DEBUG_SPEED] Speed = %dmps | IAS = %dkph | TAS = %dkph",speed_mps,speed_kph,speed_tas))
     
     if not RedGCI.IS_AI_PLANE then return end
     
     local minheight = land.getHeight( {x=wx,y=wz} ) + 300 
     
     local route = {}
-    local grp = GROUP:FindByName(group_name)
+
     local tsk = grp:TaskAerobatics()
-    tsk = grp:TaskAerobaticsStraightFlight(tsk,1,math.max(wy, minheight),speed_kph,UseSmoke,StartImmediately,10)
+    tsk = grp:TaskAerobaticsStraightFlight(tsk,1,math.max(wy, minheight),speed_tas,UseSmoke,StartImmediately,10)
     local startpoint = grp:GetCoordinate()
     local wp0 = startpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.TurningPoint,COORDINATE.WaypointAction.FlyoverPoint,
-      speed_kph,true,airbase,DCSTasks,"VECTOR")    
+      speed_tas,true,airbase,DCSTasks,"VECTOR")    
   
     local endpoint = COORDINATE:New(wx,math.max(wy, minheight),wz)
     --endpoint:MarkToAll("Vector",ReadOnly,"Vector")
@@ -355,10 +358,10 @@ local function push_waypoint(group_name, wx, wz, wy, speed_mps, land_home)
     local wp1
     if land_home == true then
       wp1 = endpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.Land,COORDINATE.WaypointAction.Landing,
-      speed_kph,true,RedGCI.AIRBASE,DCSTasks,"HOME")
+      speed_tas,true,RedGCI.AIRBASE,DCSTasks,"HOME")
     else
       wp1 = endpoint:WaypointAir(COORDINATE.WaypointAltType.BARO,COORDINATE.WaypointType.TurningPoint,COORDINATE.WaypointAction.FlyoverPoint,
-      speed_kph,true,airbase,DCSTasks,"VECTOR")
+      speed_tas,true,airbase,DCSTasks,"VECTOR")
     end
     table.insert(route,wp0)
     table.insert(route,wp1) 
