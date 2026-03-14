@@ -49,7 +49,7 @@ RedGCI.AIRBASE = AIRBASE:FindByName(RedGCI.HOMEBASENAME)
 RedGCI.HOME_BASE   = RedGCI.AIRBASE:GetVec2() --RedGCI.HOME_BASE   or nil
 RedGCI.FIGHTER_GROUP  = "Mig-29A"
 RedGCI.TARGET_GROUP   = "Target"
-RedGCI.CALLSIGN       = "Сокол-1"
+RedGCI.CALLSIGN       = "Сокол 1"
 RedGCI.TICK_INTERVAL  = 10
 RedGCI.SUBTITLE_TIME  = 8
 RedGCI.COALITION      = 1   -- 1=RED
@@ -97,6 +97,18 @@ function RedGCI.InitSRS(path, channel, modulation, culture, voice, port)
     RedGCI.msrs:SetVoice(voice or MSRS.Voices.Google.Standard.ru_RU_Standard_D)
     RedGCI.msrs:SetCoalition(coalition.side.RED)
     RedGCI.SRSQueue = MSRSQUEUE:New("RedGCI")
+end
+
+-- ── 2a. MSRS Callsigns for Players ─────────────────────────────
+function RedGCI.GetCallsigns(groupname,playername)
+  -- make this a bit more sophisticated
+  local returnname = string.match(playername,"([%a]+)$")
+  if returnname == nil then
+    returnname = string.gsub(playername,"[%p%d]","") or "Ghost"
+    returnname = string.gsub(returnname,"[%s]+$","") or "Ghost"
+    returnname = string.match(returnname,"([%a]+)$") or "Ghost"
+  end
+  return returnname
 end
 
 -- ── 3. Token-String parsen ────────────────────────────────────
@@ -169,7 +181,7 @@ function RedGCI.Transmit(token_str, callsign, locale, dir_lr, dir_rl)
 
     -- Variablen zusammenstellen
     local vars = {
-        CALLSIGN = callsign or RedGCI.CALLSIGN,
+        CALLSIGN = RedGCI.PlayerCallsign or callsign or RedGCI.CALLSIGN,
         HDG      = tok.hdg  and string.format("%03d", tok.hdg)  or "",
         ALT      = tok.alt  and tostring(math.floor(tok.alt))   or "",
         RNG      = tok.rng  and tostring(math.floor(tok.rng))   or "",
@@ -640,6 +652,8 @@ local function GCI_init()
     RedGCI.getCtxId(RedGCI.CALLSIGN)
     setup_f10_menu()
 
+
+
     timer.scheduleFunction(gci_tick, nil, timer.getTime() + 2.0)
 
     local mode_str = RedGCI.IS_AI_PLANE and " [AI]" or " [Human]"
@@ -654,7 +668,11 @@ local function GCI_init()
              
     if RedGCI.IS_AI_PLANE == true then
       set_radar(RedGCI.FIGHTER_GROUP,false)
-    end         
+    end
+    
+    if RedGCI.IS_AI_PLANE == false then
+      RedGCI.PlayerCallsign = GROUP:FindByName(RedGCI.FIGHTER_GROUP):GetCustomCallSign(true,true,nil,RedGCI.GetCallsigns)
+    end    
 end
 
 GCI_init()
