@@ -421,8 +421,9 @@ local pilot_flags = {
     threat = false,
 }
 
-local prev_state = nil
-local prev_wf    = false
+local prev_state     = nil
+local prev_wf        = false
+local last_vector_tx = 0          -- timer.getTime() of last VECTOR transmission
 
 -- ──────────────────────────────────────────────────────────────
 --  Haupt-Tick
@@ -553,10 +554,16 @@ local function gci_tick(_, now)
             t.y)   -- target_alt = echte Zielhöhe ohne Offset
 
     if not silence then
-        local dir_lr = derive_dir_lr(aspect)
-        local dir_rl = derive_dir_rl(f, t)
-        RedGCI.Transmit(token_str, RedGCI.CALLSIGN,
-                        RedGCI.LOCALE, dir_lr, dir_rl)
+        local skip_vector = state == "VECTOR" and (now - last_vector_tx) < 20
+        if not skip_vector then
+            local dir_lr = derive_dir_lr(aspect)
+            local dir_rl = derive_dir_rl(f, t)
+            RedGCI.Transmit(token_str, RedGCI.CALLSIGN,
+                            RedGCI.LOCALE, dir_lr, dir_rl)
+            if state == "VECTOR" then
+                last_vector_tx = now
+            end
+        end
     end
 
     -- Weapons free edge: fire once when wf first becomes true
