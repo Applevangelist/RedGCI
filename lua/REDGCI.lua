@@ -150,7 +150,7 @@ function REDGCI:New(FighterGroupName, TargetGroupName, Callsign, Coalition)
     self.HomeBaseName     = nil
     self.HomeBase         = nil    -- Vec2 {x,y}
     self.Debug            = false
-    self.WFRange          = 15000  -- metres: AI weapons-free range (C kernel wf=false workaround)
+    self.WFRange          = 20000  -- metres: AI weapons-free range (C kernel wf=false workaround)
 
     -- ── SRS defaults ─────────────────────────────────────────
     self.SRSPath          = nil
