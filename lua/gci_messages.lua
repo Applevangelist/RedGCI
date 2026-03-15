@@ -67,17 +67,17 @@ RedGCI.Messages = {
         VECTOR_WITH_TTI     = "{CALLSIGN}, Kurs {HDG}, Höhe {ALT} Meter, neunhundert. Ziel in {TTI_M} Minuten.",
 
         -- COMMIT
-        COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT} Meter. Radar an. Such.",
+        COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT} Meter. Radar an. Suchen.",
         COMMIT_NO_LOCK      = "{CALLSIGN}, Korrektur: Peilung {ASPECT}, {RNG} Kilometer. Warum kein Lock?",
         COMMIT_NUDGE        = "{CALLSIGN}, zehn Grad nach {DIR_LR}.",
 
         -- RADAR CONTACT
-        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Waffe frei. Angriff.",
+        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Feuer frei. Angriff.",
         RADAR_LOCK_HOLD     = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Warte auf Freigabe.",
-        RADAR_WF_NOW        = "{CALLSIGN}, Waffe frei.",
+        RADAR_WF_NOW        = "{CALLSIGN}, Feuer frei.",
 
         -- VISUAL
-        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Waffe frei.",
+        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Feuer frei.",
 
         -- NOTCH
         NOTCH_ENTRY         = "{CALLSIGN}, Ziel manövriert. Warten.",
@@ -96,8 +96,8 @@ RedGCI.Messages = {
         MERGE_SPLASH        = "{CALLSIGN}, Treffer bestätigt. Kurs nach Hause.",
 
         -- STATE TRANSITIONS
-        RADAR_ON            = "{CALLSIGN}, Radar an. Such.",
-        WEAPONS_FREE        = "{CALLSIGN}, Waffe frei.",
+        RADAR_ON            = "{CALLSIGN}, Radar an. Suchen.",
+        WEAPONS_FREE        = "{CALLSIGN}, Feuer frei.",
     },
 
     -- ── RUSSISCH ─────────────────────────────────────────────
@@ -155,3 +155,4 @@ RedGCI.DirTokens = {
 }
 
 env.info("[GCI_MESSAGES] Nachrichten geladen.")
+

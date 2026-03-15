@@ -136,7 +136,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Upload gci_core.dll
+      - name: Upload RedGCI.dll
         uses: actions/upload-artifact@v6
         with:
           name: gci_dll-windows-${{ github.sha }}

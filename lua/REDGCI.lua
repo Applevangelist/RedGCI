@@ -336,13 +336,13 @@ end
 --- Initialize MSRS + queue.
 -- @param #REDGCI self
 function REDGCI:_InitSRS()
-    self._msrs = MSRS:New(self.SRSPath, self.SRSFreq, self.SRSMod)
+    self._msrs = MSRS:New(self.SRSPath, self.SRSFreq, self.SRSMod) -- Sound.MSRS#MSRS
     self._msrs:SetPort(self.SRSPort)
     self._msrs:SetLabel("GCI")
     self._msrs:SetCulture(self.SRSCulture)
     self._msrs:SetVoice(self.SRSVoice)
     self._msrs:SetCoalition(self.Coalition)
-    self._srs_queue = MSRSQUEUE:New("REDGCI_" .. self.Callsign)
+    self._srs_queue = MSRSQUEUE:New("REDGCI_" .. self.Callsign) -- Sound.MSRS#MSRSQUEUE
 end
 
 --- Get live unit data from a DCS group (returns first alive unit).
@@ -526,10 +526,10 @@ function REDGCI:_PushWaypoint(wx, wz, wy, SpeedMps, LandHome)
     local safe_alt      = math.max(wy, terrain_floor)
     local kmph          = UTILS.MpsToKmph(SpeedMps)
     local speed_tas = UTILS.IasToTas(kmph,math.max(wy, safe_alt))
-
+    
     local tsk = grp:TaskAerobatics()
     tsk = grp:TaskAerobaticsStraightFlight(tsk,1,math.max(wy, safe_alt),speed_tas,UseSmoke,StartImmediately,10)
-
+    
     local startpoint = grp:GetCoordinate()
     local wp0 = startpoint:WaypointAir(
         COORDINATE.WaypointAltType.BARO,

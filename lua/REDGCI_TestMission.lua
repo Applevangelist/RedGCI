@@ -28,10 +28,9 @@ end
 
 local gci = REDGCI:New("Mig-29A", "Target", "Сокол-1", coalition.side.RED)
 
-gci:SetLocale("ru")
+gci:SetLocale("de")
 gci:SetAIMode(true, AIRBASE.Caucasus.Nalchik)
-gci:SetSRS(nil, 251, radio.modulation.AM,
-           "ru-RU", MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
+gci:SetSRS(nil, 124, radio.modulation.AM,"de_DE", MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
 gci:SetTickInterval(10)
 gci:SetTxRepeatInterval(30)
 gci:SetDebug(true)
@@ -40,35 +39,4 @@ gci:SetDebug(true)
 --  Start
 -- ──────────────────────────────────────────────────────────────
 
-local function GCI_init()
-    
-    RedGCI.InitLocalization()
-    RedGCI.InitSRS(path, RedGCI.SRSFREQUENCY or 124, radio.modulation.AM, culture, MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
-    
-    RedGCI.getCtxId(RedGCI.CALLSIGN)
-    setup_f10_menu()
-
-
-
-    timer.scheduleFunction(gci_tick, nil, timer.getTime() + 2.0)
-
-    local mode_str = RedGCI.IS_AI_PLANE and " [AI]" or " [Human]"
-    trigger.action.outTextForCoalition(
-        RedGCI.COALITION,
-        "[GCI] Системы готовы. Жду цель." .. mode_str,
-        5)
-
-    env.info("[GCI_BRIDGE] Bereit. Jäger='" .. RedGCI.FIGHTER_GROUP ..
-             "' Ziel='" .. RedGCI.TARGET_GROUP ..
-             "' Modus=" .. (RedGCI.IS_AI_PLANE and "AI" or "Human"))
-             
-    if RedGCI.IS_AI_PLANE == true then
-      set_radar(RedGCI.FIGHTER_GROUP,false)
-    end
-    
-    if RedGCI.IS_AI_PLANE == false then
-      RedGCI.PlayerCallsign = GROUP:FindByName(RedGCI.FIGHTER_GROUP):GetCustomCallSign(true,true,nil,RedGCI.GetCallsigns)
-    end    
-end
-
-GCI_init()
+gci:Start()
