@@ -723,7 +723,8 @@ end
 -- @param #REDGCI self
 function REDGCI:onafterStatus(From, Event, To)
     local f = self:_GetUnitData(self.FighterGroupName)
-    local t = self:_GetUnitData(self.TargetGroupName)
+    local t = self.Intel and self:_GetTargetFromIntel(f)
+           or self:_GetUnitData(self.TargetGroupName)
 
     if not f then
         self:I(self.lid .. "Fighter '" .. self.FighterGroupName .. "' not found — stopping.")
