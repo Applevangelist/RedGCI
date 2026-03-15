@@ -30,8 +30,7 @@ local gci = REDGCI:New("Mig-29A", "Target", "Сокол-1", coalition.side.RED)
 
 gci:SetLocale("de")
 gci:SetAIMode(true, AIRBASE.Caucasus.Nalchik)
-gci:SetSRS(nil, 124, radio.modulation.AM,
-           "de-DE, MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
+gci:SetSRS(nil, 124, radio.modulation.AM,"de_DE", MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
 gci:SetTickInterval(10)
 gci:SetTxRepeatInterval(30)
 gci:SetDebug(true)
