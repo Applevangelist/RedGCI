@@ -141,7 +141,7 @@ typedef struct {
 #define GCI_ASPECT_REAR_ATTACK     120.0f   // Heckschuss-Aspekt
 
 #define GCI_FUEL_BINGO              0.25f   // 25% – Rückkehr
-#define GCI_WF_RANGE_MAX          15000.0f  // Waffenfreigabe-Range = RADAR_FLOOR
+#define GCI_WF_RANGE_MAX          20000.0f  // Waffenfreigabe-Range (R-27ER effective BVR)
 #define GCI_MAX_TTI                 600.0f  // 10 Minuten – Limit
 
 #define GCI_DELAY_MIN               3.0f    // Funkverzögerung Sekunden
