@@ -799,12 +799,24 @@ function REDGCI:onafterStatus(From, Event, To)
     end
 
     -- ── 8. Build and send transmission ────────────────────────
-    local silence, token_str, weapons_free, _ =
-        RedGCI.buildTransmission(
-            self.Callsign,
-            hdg, tti, mode, wf,
-            ip_x, ip_z, ip_y,
-            t.y)   -- pass real target altitude (no offset) for ALT token
+    -- VECTOR: report intercept altitude (ip_y) so pilot climbs/descends to geometry.
+    -- All other states: report real target altitude (t.y) for situational awareness.
+    local silence, token_str, weapons_free
+    if state == "VECTOR" then
+        silence, token_str, weapons_free, _ =
+            RedGCI.buildTransmission(
+                self.Callsign,
+                hdg, tti, mode, wf,
+                ip_x, ip_z, ip_y,
+                ip_y)
+    else
+        silence, token_str, weapons_free, _ =
+            RedGCI.buildTransmission(
+                self.Callsign,
+                hdg, tti, mode, wf,
+                ip_x, ip_z, ip_y,
+                t.y)   -- pass real target altitude (no offset) for ALT token
+    end
 
     if not silence then
         local dir_lr = self:_DeriveDirLR(aspect)
