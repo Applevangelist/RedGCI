@@ -68,22 +68,22 @@ REDGCI.Messages = {
         COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT} Meter. Radar an. Such.",
         COMMIT_NO_LOCK      = "{CALLSIGN}, Korrektur: Peilung {ASPECT}, {RNG} Kilometer. Warum kein Lock?",
         COMMIT_NUDGE        = "{CALLSIGN}, zehn Grad nach {DIR_LR}.",
-        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Waffe frei. Angriff.",
+        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Feuer frei. Angriff.",
         RADAR_LOCK_HOLD     = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Warte auf Freigabe.",
-        RADAR_WF_NOW        = "{CALLSIGN}, Waffe frei.",
-        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Waffe frei.",
+        RADAR_WF_NOW        = "{CALLSIGN}, Feuer frei.",
+        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Feuer frei.",
         NOTCH_ENTRY         = "{CALLSIGN}, Ziel manövriert. Warten.",
         NOTCH_UPDATE        = "{CALLSIGN}, Ziel {DIR_RL}, {RNG} Kilometer. Halten.",
         ABORT_BINGO         = "{CALLSIGN}, BINGO Kraftstoff. Abbruch. Sofort zurück. Kurs {HDG}.",
         ABORT_THREAT        = "{CALLSIGN}, BEDROHUNG. Abbruch. Kurs {HDG}, sinken.",
-        MERGE_ENTRY         = "{CALLSIGN}, Kontakt {DIR_RL}, {ASPECT} Grad. KAMPF.",
+        MERGE_ENTRY         = "{CALLSIGN}, Kontakt {DIR_RL}, {ASPECT} Grad. Angriff!",
         MERGE_OVERSHOOT     = "{CALLSIGN}, Überschuss. Ausbrechen {DIR_LR}.",
         MERGE_SEPARATION    = "{CALLSIGN}, trennen. Steigen und neu ansetzen.",
         MERGE_REATTACK      = "{CALLSIGN}, neu angreifen. Ziel {DIR_RL}.",
         MERGE_LOST          = "{CALLSIGN}, BLIND. Kurs {HDG}.",
         MERGE_SPLASH        = "{CALLSIGN}, Treffer bestätigt. Kurs nach Hause.",
         RADAR_ON            = "{CALLSIGN}, Radar an. Such.",
-        WEAPONS_FREE        = "{CALLSIGN}, Waffe frei.",
+        WEAPONS_FREE        = "{CALLSIGN}, Feuer frei.",
     },
 
     -- ── RUSSIAN ───────────────────────────────────────────────
@@ -185,6 +185,7 @@ end
 -- ─────────────────────────────────────────────────────────────
 
 --- Set the locale for radio messages.
+-- @param #REDGCI self
 -- @param #string Locale  "en", "de", or "ru" (default "ru")
 -- @return #REDGCI self
 function REDGCI:SetLocale(Locale)
@@ -193,6 +194,7 @@ function REDGCI:SetLocale(Locale)
 end
 
 --- Enable or disable AI waypoint and radar management.
+-- @param #REDGCI self
 -- @param #boolean IsAI           true = push waypoints + control radar
 -- @param #string  HomeBaseName   AIRBASE name for RTB (e.g. AIRBASE.Caucasus.Nalchik)
 -- @return #REDGCI self
@@ -211,6 +213,7 @@ function REDGCI:SetAIMode(IsAI, HomeBaseName)
 end
 
 --- Configure SRS radio output.
+-- @param #REDGCI self
 -- @param #string  Path       Path to SRS (or nil to use MSRS default)
 -- @param #number  Frequency  MHz, e.g. 251
 -- @param #number  Modulation radio.modulation.AM or FM (default AM)
@@ -229,6 +232,7 @@ function REDGCI:SetSRS(Path, Frequency, Modulation, Culture, Voice, Port)
 end
 
 --- Set the GCI tick interval in seconds.
+-- @param #REDGCI self
 -- @param #number Seconds  Default 10.0
 -- @return #REDGCI self
 function REDGCI:SetTickInterval(Seconds)
@@ -237,6 +241,7 @@ function REDGCI:SetTickInterval(Seconds)
 end
 
 --- Set minimum seconds between identical transmissions.
+-- @param #REDGCI self
 -- @param #number Seconds  Default 30.0
 -- @return #REDGCI self
 function REDGCI:SetTxRepeatInterval(Seconds)
@@ -245,6 +250,7 @@ function REDGCI:SetTxRepeatInterval(Seconds)
 end
 
 --- Enable or disable debug logging.
+-- @param #REDGCI self
 -- @param #boolean OnOff  true = verbose logging
 -- @return #REDGCI self
 function REDGCI:SetDebug(OnOff)
@@ -254,6 +260,7 @@ end
 
 --- Signal that the pilot has achieved radar lock.
 -- Equivalent to pressing "Radar Lock" in the F10 menu.
+-- @param #REDGCI self
 -- @return #REDGCI self
 function REDGCI:SetPilotRadarLock(OnOff)
     self._pilot_flags.radar = OnOff ~= false
@@ -261,6 +268,7 @@ function REDGCI:SetPilotRadarLock(OnOff)
 end
 
 --- Signal that the pilot has visual contact.
+-- @param #REDGCI self
 -- @return #REDGCI self
 function REDGCI:SetPilotVisual(OnOff)
     self._pilot_flags.visual = OnOff ~= false
@@ -268,6 +276,7 @@ function REDGCI:SetPilotVisual(OnOff)
 end
 
 --- Signal that the pilot's RWR is active (threat warning).
+-- @param #REDGCI self
 -- @return #REDGCI self
 function REDGCI:SetPilotThreat(OnOff)
     self._pilot_flags.threat = OnOff ~= false
@@ -275,6 +284,7 @@ function REDGCI:SetPilotThreat(OnOff)
 end
 
 --- Reset FSM state and pilot flags (e.g. after a splash or new intercept).
+-- @param #REDGCI self
 -- @return #REDGCI self
 function REDGCI:Reset()
     self._pilot_flags = { radar=false, visual=false, threat=false }
@@ -291,7 +301,7 @@ end
 --  Internal helpers
 -- ─────────────────────────────────────────────────────────────
 
---- @local
+--- @param #REDGCI self
 function REDGCI:_Log(msg)
     if self.Debug then
         env.info(self.lid .. msg)
@@ -299,7 +309,7 @@ function REDGCI:_Log(msg)
 end
 
 --- Initialize TEXTANDSOUND localization from embedded Messages table.
--- @local
+-- @param #REDGCI self
 function REDGCI:_InitLocalization()
     self._gettext = TEXTANDSOUND:New("REDGCI_" .. self.Callsign, "en")
     for locale, entries in pairs(REDGCI.Messages) do
@@ -311,7 +321,7 @@ function REDGCI:_InitLocalization()
 end
 
 --- Initialize MSRS + queue.
--- @local
+-- @param #REDGCI self
 function REDGCI:_InitSRS()
     self._msrs = MSRS:New(self.SRSPath, self.SRSFreq, self.SRSMod)
     self._msrs:SetPort(self.SRSPort)
@@ -323,9 +333,9 @@ function REDGCI:_InitSRS()
 end
 
 --- Get live unit data from a DCS group (returns first alive unit).
+-- @param #REDGCI self
 -- @param #string GroupName
 -- @return #table  { x, y, z, spd, vx, vy, vz, hdg, fuel } or nil
--- @local
 function REDGCI:_GetUnitData(GroupName)
     local grp = Group.getByName(GroupName)
     if not grp then return nil end
@@ -354,7 +364,7 @@ end
 --- Parse a pipe-separated token string from the C kernel.
 -- Input:  "VECTOR|hdg=165|alt=4500|tti_m=8|wf=false"
 -- Output: { key="VECTOR", hdg=165, alt=4500, tti_m=8, wf=false }
--- @local
+-- @param #REDGCI self
 function REDGCI:_ParseTokens(TokenStr)
     if not TokenStr or TokenStr == "" then return nil end
     local parts = {}
@@ -376,7 +386,7 @@ function REDGCI:_ParseTokens(TokenStr)
 end
 
 --- Fill {PLACEHOLDER} tokens in a template string.
--- @local
+-- @param #REDGCI self
 function REDGCI:_FillTemplate(Template, Vars)
     return (string.gsub(Template, "{([%w_]+)}", function(key)
         return tostring(Vars[key] or "")
@@ -384,25 +394,25 @@ function REDGCI:_FillTemplate(Template, Vars)
 end
 
 --- Resolve a direction key to a localized word.
+-- @param #REDGCI self
 -- @param #string Key   "left", "right", "ahead", "behind", "low", "high"
 -- @return #string
--- @local
 function REDGCI:_DirToken(Key)
     local t = REDGCI.DirTokens[self.Locale] or REDGCI.DirTokens["en"]
     return t[Key] or Key
 end
 
 --- Derive "left"/"right" turn instruction from aspect angle.
--- @local
+-- @param #REDGCI self
 function REDGCI:_DeriveDirLR(AspectAngle)
     return (AspectAngle > 5.0) and "right" or "left"
 end
 
 --- Derive target position relative to fighter ("ahead"/"behind"/"left"/"right").
+-- @param #REDGCI self
 -- @param #table Fighter  unit data
 -- @param #table Target   unit data
 -- @return #string
--- @local
 function REDGCI:_DeriveDirRL(Fighter, Target)
     local dx     = Target.x - Fighter.x
     local dz     = Target.z - Fighter.z
@@ -417,10 +427,10 @@ function REDGCI:_DeriveDirRL(Fighter, Target)
 end
 
 --- Build and dispatch a radio transmission.
+-- @param #REDGCI self
 -- @param #string TokenStr   Pipe-separated token string from C kernel
 -- @param #string DirLR      "left"/"right" for manoeuvre cues
 -- @param #string DirRL      "ahead"/"behind"/"left"/"right" for target position
--- @local
 function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
     local tok = self:_ParseTokens(TokenStr)
     if not tok then
@@ -471,7 +481,7 @@ function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
             self._msrs,       -- MSRS instance
             delay,            -- start delay
             2,                -- priority
-            nil,              -- subgroups
+            {GROUP:FindByName(RedGCI.FIGHTER_GROUP)},            -- Subgroups (Subtitle)
             text,             -- subtitle
             self.SubtitleTime,-- subtitle duration
             nil, nil,         -- channel/mod (from msrs)
@@ -486,12 +496,12 @@ function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
 end
 
 --- Push a new rolling waypoint to the AI group.
+-- @param #REDGCI self
 -- @param #number wx       DCS x coord (North)
 -- @param #number wz       DCS z coord (East)
 -- @param #number wy       altitude MSL metres
 -- @param #number SpeedMps airspeed in m/s
 -- @param #boolean LandHome  true = set waypoint type to LAND at HomeBase
--- @local
 function REDGCI:_PushWaypoint(wx, wz, wy, SpeedMps, LandHome)
     if not self.IsAIPlane then return end
 
@@ -502,13 +512,17 @@ function REDGCI:_PushWaypoint(wx, wz, wy, SpeedMps, LandHome)
     local terrain_floor = land.getHeight({ x=wx, y=wz }) + 300
     local safe_alt      = math.max(wy, terrain_floor)
     local kmph          = UTILS.MpsToKmph(SpeedMps)
+    local speed_tas = UTILS.IasToTas(kmph,math.max(wy, safe_alt))
+
+    local tsk = grp:TaskAerobatics()
+    tsk = grp:TaskAerobaticsStraightFlight(tsk,1,math.max(wy, safe_alt),speed_tas,UseSmoke,StartImmediately,10)
 
     local startpoint = grp:GetCoordinate()
     local wp0 = startpoint:WaypointAir(
         COORDINATE.WaypointAltType.BARO,
         COORDINATE.WaypointType.TurningPoint,
         COORDINATE.WaypointAction.FlyoverPoint,
-        kmph, true, nil, {}, "VECTOR")
+        speed_tas, true, nil, {}, "VECTOR")
 
     local endpoint = COORDINATE:New(wx, safe_alt, wz)
     local wp1
@@ -518,28 +532,28 @@ function REDGCI:_PushWaypoint(wx, wz, wy, SpeedMps, LandHome)
             COORDINATE.WaypointAltType.BARO,
             COORDINATE.WaypointType.Land,
             COORDINATE.WaypointAction.Landing,
-            kmph, true, ab, {}, "HOME")
+            speed_tas, true, ab, {}, "HOME")
     else
         wp1 = endpoint:WaypointAir(
             COORDINATE.WaypointAltType.BARO,
             COORDINATE.WaypointType.TurningPoint,
             COORDINATE.WaypointAction.FlyoverPoint,
-            kmph, true, nil, {}, "VECTOR")
+            speed_tas, true, nil, tsk, "VECTOR")
     end
 
     grp:Route({ wp0, wp1 }, 0.2)
-    self:_Log(string.format("WP → x=%.0f z=%.0f alt=%.0fm spd=%.0f kph",
-                            wx, wz, safe_alt, kmph))
+    self:_Log(string.format("WP → x=%.0f z=%.0f alt=%.0fm spd=%.0f kph TAS=%.0f kph",
+                            wx, wz, safe_alt, kmph, speed_tas))
 end
 
 --- Clamp an intercept point to max_dist from the fighter.
 -- Prevents the AI from overshooting on a distant waypoint.
+-- @param #REDGCI self
 -- @param #table  Fighter  unit data
 -- @param #number ip_x     intercept x (DCS North)
 -- @param #number ip_z     intercept z (DCS East)
 -- @param #number ip_y     intercept altitude
 -- @return #number, #number, #number  clamped wx, wz, wy
--- @local
 function REDGCI:_ComputeRollingWaypoint(Fighter, ip_x, ip_z, ip_y)
     local dx   = ip_x - Fighter.x
     local dz   = ip_z - Fighter.z
@@ -561,22 +575,28 @@ function REDGCI:_ComputeRollingWaypoint(Fighter, ip_x, ip_z, ip_y)
 end
 
 --- Toggle radar emission on the fighter group.
+-- @param #REDGCI self
 -- @param #boolean On
--- @local
 function REDGCI:_SetRadar(On)
     if not self.IsAIPlane then return end
     local grp = GROUP:FindByName(self.FighterGroupName)
     if not grp then return end
-    if On then
-        grp:SetOptionRadarUsingForContinousSearch()
+    if On == true then
+      grp:SetOptionRadarUsingForContinousSearch()
+      grp:OptionROEWeaponFree()
+      grp:OptionAlarmStateRed()
+      grp:OptionAAAttackRange(1)
     else
-        grp:SetOptionRadarUsingNever()
+      grp:SetOptionRadarUsingNever()
+      grp:OptionROEHoldFire()
+      grp:OptionAlarmStateAuto()
+      grp:OptionAAAttackRange(3)
     end
     self:_Log("Radar " .. (On and "ON" or "OFF"))
 end
 
 --- Register F10 coalition menu entries.
--- @local
+-- @param #REDGCI self
 function REDGCI:_SetupF10Menu()
     local root = missionCommands.addSubMenuForCoalition(self.Coalition, "GCI")
 
@@ -632,6 +652,7 @@ end
 
 --- Called when Start event fires (Stopped → Running).
 -- Initializes localization, SRS, context, F10 menu, and schedules first tick.
+-- @param #REDGCI self
 function REDGCI:onafterStart(From, Event, To)
     self:I(self.lid .. "Starting...")
 
@@ -654,6 +675,7 @@ function REDGCI:onafterStart(From, Event, To)
 end
 
 --- Main tick — called every TickInterval seconds while Running.
+-- @param #REDGCI self
 function REDGCI:onafterStatus(From, Event, To)
     local f = self:_GetUnitData(self.FighterGroupName)
     local t = self:_GetUnitData(self.TargetGroupName)
@@ -807,6 +829,7 @@ function REDGCI:onafterStatus(From, Event, To)
 end
 
 --- Called when Stop event fires.
+-- @param #REDGCI self
 function REDGCI:onafterStop(From, Event, To)
     self:I(self.lid .. "Stopped.")
 end
