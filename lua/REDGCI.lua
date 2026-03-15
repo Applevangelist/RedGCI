@@ -785,7 +785,7 @@ function REDGCI:onafterStatus(From, Event, To)
         local _, token_str, silence, _ =
             RedGCI.mergeUpdate(self.Callsign,
                 rel_brg, range, t.y - f.y, false)
-
+  
         if not silence then
             local dir_rl = self:_DeriveDirRL(f, t)
             self:_Transmit(token_str, nil, dir_rl)
@@ -800,13 +800,24 @@ function REDGCI:onafterStatus(From, Event, To)
     end
 
     -- ── 8. Build and send transmission ────────────────────────
-    local silence, token_str, weapons_free, _ =
-        RedGCI.buildTransmission(
-            self.Callsign,
-            hdg, tti, mode, wf,
-            ip_x, ip_z, ip_y,
-            t.y)   -- pass real target altitude (no offset) for ALT token
-
+    local silence, token_str, weapons_free
+    if state == "VECTOR" then
+        silence, token_str, weapons_free, _ =
+            RedGCI.buildTransmission(
+              self.Callsign,
+              hdg, tti, mode, wf,
+              ip_x, ip_z, ip_y,
+              ip_y)
+    else
+    
+      silence, token_str, weapons_free, _ =
+          RedGCI.buildTransmission(
+              self.Callsign,
+              hdg, tti, mode, wf,
+              ip_x, ip_z, ip_y,
+              t.y)   -- pass real target altitude (no offset) for ALT token
+    end
+    
     if not silence then
         local dir_lr = self:_DeriveDirLR(aspect)
         local dir_rl = self:_DeriveDirRL(f, t)
