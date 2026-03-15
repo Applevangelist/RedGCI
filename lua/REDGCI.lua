@@ -65,13 +65,13 @@ REDGCI.Messages = {
     de = {
         VECTOR              = "{CALLSIGN}, Kurs {HDG}, Höhe {ALT} Meter, neunhundert.",
         VECTOR_WITH_TTI     = "{CALLSIGN}, Kurs {HDG}, Höhe {ALT} Meter, neunhundert. Ziel in {TTI_M} Minuten.",
-        COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT} Meter. Radar an. Such.",
+        COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT} Meter. Radar an. Suchen.",
         COMMIT_NO_LOCK      = "{CALLSIGN}, Korrektur: Peilung {ASPECT}, {RNG} Kilometer. Warum kein Lock?",
         COMMIT_NUDGE        = "{CALLSIGN}, zehn Grad nach {DIR_LR}.",
         RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Feuer frei. Angriff.",
         RADAR_LOCK_HOLD     = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Warte auf Freigabe.",
         RADAR_WF_NOW        = "{CALLSIGN}, Feuer frei.",
-        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Feuer frei.",
+        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Feuer frei!",
         NOTCH_ENTRY         = "{CALLSIGN}, Ziel manövriert. Warten.",
         NOTCH_UPDATE        = "{CALLSIGN}, Ziel {DIR_RL}, {RNG} Kilometer. Halten.",
         ABORT_BINGO         = "{CALLSIGN}, BINGO Kraftstoff. Abbruch. Sofort zurück. Kurs {HDG}.",
@@ -82,8 +82,8 @@ REDGCI.Messages = {
         MERGE_REATTACK      = "{CALLSIGN}, neu angreifen. Ziel {DIR_RL}.",
         MERGE_LOST          = "{CALLSIGN}, BLIND. Kurs {HDG}.",
         MERGE_SPLASH        = "{CALLSIGN}, Treffer bestätigt. Kurs nach Hause.",
-        RADAR_ON            = "{CALLSIGN}, Radar an. Such.",
-        WEAPONS_FREE        = "{CALLSIGN}, Feuer frei.",
+        RADAR_ON            = "{CALLSIGN}, Radar an. Suchen.",
+        WEAPONS_FREE        = "{CALLSIGN}, Feuer frei!",
     },
 
     -- ── RUSSIAN ───────────────────────────────────────────────
@@ -124,6 +124,7 @@ REDGCI.DirTokens = {
 -- ─────────────────────────────────────────────────────────────
 
 --- Create a new REDGCI instance.
+-- @param #REDGCI self
 -- @param #string FighterGroupName  DCS group name of the interceptor(s)
 -- @param #string TargetGroupName   DCS group name of the target(s)
 -- @param #string Callsign          Radio callsign string (e.g. "Сокол-1")
@@ -138,7 +139,7 @@ function REDGCI:New(FighterGroupName, TargetGroupName, Callsign, Coalition)
     -- ── Core identity ─────────────────────────────────────────
     self.FighterGroupName = FighterGroupName or "Mig-29A"
     self.TargetGroupName  = TargetGroupName  or "Target"
-    self.Callsign         = Callsign         or "Сокол-1"
+    self.Callsign         = Callsign         or "Сокол 1"
     self.Coalition        = Coalition        or coalition.side.RED
 
     -- ── Defaults ─────────────────────────────────────────────
@@ -150,7 +151,7 @@ function REDGCI:New(FighterGroupName, TargetGroupName, Callsign, Coalition)
     self.HomeBaseName     = nil
     self.HomeBase         = nil    -- Vec2 {x,y}
     self.Debug            = false
-    self.WFRange          = 15000  -- metres: AI weapons-free range (C kernel wf=false workaround)
+    self.WFRange          = 20000  -- metres: AI weapons-free range (C kernel wf=false workaround)
 
     -- ── SRS defaults ─────────────────────────────────────────
     self.SRSPath          = nil
@@ -164,6 +165,7 @@ function REDGCI:New(FighterGroupName, TargetGroupName, Callsign, Coalition)
     self._pilot_flags = { radar=false, visual=false, threat=false }
     self._prev_state  = nil
     self._prev_wf     = false
+    self._prev_radar  = false
     self._last_tx     = { text="", time=0 }
     self._msrs        = nil
     self._srs_queue   = nil
@@ -255,10 +257,10 @@ end
 -- state is RADAR_CONTACT AND range <= WFRange). Set to 0 to disable the
 -- Lua-side override and rely solely on the C kernel.
 -- @param #REDGCI self
--- @param #number Meters  Default 15000
+-- @param #number Meters  Default 20000
 -- @return #REDGCI self
 function REDGCI:SetWFRange(Meters)
-    self.WFRange = Meters or 15000
+    self.WFRange = Meters or 20000
     return self
 end
 
@@ -303,9 +305,11 @@ function REDGCI:Reset()
     self._pilot_flags = { radar=false, visual=false, threat=false }
     self._prev_state  = nil
     self._prev_wf     = false
+    self._prev_radar  = false
     self._last_tx     = { text="", time=0 }
     RedGCI.reset(self.Callsign)
     self:_SetRadar(false)
+    self:_SetWeaponsFree(false)
     self:T(self.lid .. "Reset.")
     return self
 end
@@ -485,7 +489,7 @@ function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
     self._last_tx.time = now
 
     self:_Log(string.format("[SRS/%s/%s] %s", self.Locale, tok.key, text))
-
+      
     if self._srs_queue and self._msrs then
         local delay = tok.delay or 3.0
         self._srs_queue:NewTransmission(
@@ -505,6 +509,10 @@ function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
     else
         -- Fallback: on-screen text
         trigger.action.outText(text, self.SubtitleTime, false)
+    end
+    
+    if self.Debug then
+      trigger.action.outText(text, self.SubtitleTime, false)
     end
 end
 
@@ -596,11 +604,32 @@ function REDGCI:_SetRadar(On)
     if not grp then return end
     if On == true then
       grp:SetOptionRadarUsingForContinousSearch()
+      --grp:OptionROEWeaponFree()
+      --grp:OptionAlarmStateRed()
+      --grp:OptionAAAttackRange(1)
+    else
+      grp:SetOptionRadarUsingNever()
+      --grp:OptionROEHoldFire()
+      --grp:OptionAlarmStateAuto()
+      --grp:OptionAAAttackRange(3)
+    end
+    self:_Log("Radar " .. (On and "ON" or "OFF"))
+end
+
+--- Toggle weapons free on the fighter group.
+-- @param #REDGCI self
+-- @param #boolean On
+function REDGCI:_SetWeaponsFree(On)
+    if not self.IsAIPlane then return end
+    local grp = GROUP:FindByName(self.FighterGroupName)
+    if not grp then return end
+    if On == true then
+      --grp:SetOptionRadarUsingForContinousSearch()
       grp:OptionROEWeaponFree()
       grp:OptionAlarmStateRed()
       grp:OptionAAAttackRange(1)
     else
-      grp:SetOptionRadarUsingNever()
+      --grp:SetOptionRadarUsingNever()
       grp:OptionROEHoldFire()
       grp:OptionAlarmStateAuto()
       grp:OptionAAAttackRange(3)
@@ -671,6 +700,9 @@ function REDGCI:onafterStart(From, Event, To)
 
     self:_InitLocalization()
     self:_InitSRS()
+    self:_SetRadar(false)
+    self:_SetWeaponsFree(false)
+    
     RedGCI.getCtxId(self.Callsign)
     self:_SetupF10Menu()
 
@@ -701,10 +733,11 @@ function REDGCI:onafterStatus(From, Event, To)
 
     if not t then
         self:I(self.lid .. "Target '" .. self.TargetGroupName .. "' gone — splash/mission end.")
-        self:_SetRadar(false)
+        if self._prev_radar == true then
+          self:_SetRadar(false)
+        end
         self:_Transmit("MERGE_SPLASH|delay=1.5", nil, nil)
-        trigger.action.outTextForCoalition(
-            self.Coalition, "[GCI] Зона чистая.", 10)
+        --trigger.action.outTextForCoalition(self.Coalition, "[GCI] Зона чистая.", 10)
         if self.IsAIPlane and self.HomeBase then
             self:_PushWaypoint(
                 self.HomeBase.x, self.HomeBase.y,
@@ -764,6 +797,7 @@ function REDGCI:onafterStatus(From, Event, To)
             self:_Transmit("RADAR_ON|delay=1.5", nil, nil)
         elseif state == "ABORT" or state == "RTB" then
             self:_SetRadar(false)
+            self._prev_radar = false
             if self.HomeBase then
                 self:_PushWaypoint(
                     self.HomeBase.x, self.HomeBase.y,
@@ -780,12 +814,18 @@ function REDGCI:onafterStatus(From, Event, To)
         self:_PushWaypoint(wx, wz, wy, cruise_spd)
 
     elseif state == "COMMIT" or state == "RADAR_CONTACT" then
-        self:_SetRadar(true)
+        if self._prev_radar == false then
+           self:_SetRadar(true)
+           self._prev_radar = true        
+        end
         local wx, wz, wy = self:_ComputeRollingWaypoint(f, ip_x, ip_z, ip_y)
         self:_PushWaypoint(wx, wz, wy, f.spd)
 
     elseif state == "NOTCH" then
-        self:_SetRadar(false)
+        if self._prev_radar == true then
+           self:_SetRadar(false)
+           self._prev_radar = false       
+        end
     end
 
     -- ── 7. Merge phase ────────────────────────────────────────
@@ -807,6 +847,12 @@ function REDGCI:onafterStatus(From, Event, To)
             state, range, silence and "SILENCE" or tostring(token_str)))
 
         self._prev_state = state
+        
+        if self._prev_radar == false or self._prev_wf == false then
+          self:_SetRadar(true)
+          self:_SetWeaponsFree(true)
+        end
+        
         self:__Status(-self.TickInterval)
         return
     end
@@ -848,6 +894,10 @@ function REDGCI:onafterStatus(From, Event, To)
     -- Weapons free edge: fire once on first transition
     if weapons_free and not self._prev_wf then
         self:_Transmit("WEAPONS_FREE|delay=1.0", nil, nil)
+        self:_SetRadar(true)
+        self:_SetWeaponsFree(true)
+        self._prev_radar = true
+        self._prev_wf = true
     end
     self._prev_wf = weapons_free or false
 
