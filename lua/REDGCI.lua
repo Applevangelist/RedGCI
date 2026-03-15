@@ -150,6 +150,7 @@ function REDGCI:New(FighterGroupName, TargetGroupName, Callsign, Coalition)
     self.HomeBaseName     = nil
     self.HomeBase         = nil    -- Vec2 {x,y}
     self.Debug            = false
+    self.WFRange          = 15000  -- metres: AI weapons-free range (C kernel wf=false workaround)
 
     -- ── SRS defaults ─────────────────────────────────────────
     self.SRSPath          = nil
@@ -246,6 +247,18 @@ end
 -- @return #REDGCI self
 function REDGCI:SetTxRepeatInterval(Seconds)
     self.TxRepeatInterval = Seconds or 30.0
+    return self
+end
+
+--- Set the AI weapons-free range threshold in metres.
+-- Weapons free is declared when the C kernel wf flag is true OR (AI mode AND
+-- state is RADAR_CONTACT AND range <= WFRange). Set to 0 to disable the
+-- Lua-side override and rely solely on the C kernel.
+-- @param #REDGCI self
+-- @param #number Meters  Default 15000
+-- @return #REDGCI self
+function REDGCI:SetWFRange(Meters)
+    self.WFRange = Meters or 15000
     return self
 end
 
@@ -799,6 +812,14 @@ function REDGCI:onafterStatus(From, Event, To)
     end
 
     -- ── 8. Build and send transmission ────────────────────────
+    -- Effective WF: C kernel flag OR Lua-side override when AI has lock inside WEZ.
+    -- (C kernel currently always returns wf=false; remove override once fixed.)
+    local effective_wf = wf or (
+        self.IsAIPlane              and
+        self.WFRange > 0            and
+        state == "RADAR_CONTACT"    and
+        range <= self.WFRange)
+
     -- VECTOR: report intercept altitude (ip_y) so pilot climbs/descends to geometry.
     -- All other states: report real target altitude (t.y) for situational awareness.
     local silence, token_str, weapons_free
@@ -806,14 +827,14 @@ function REDGCI:onafterStatus(From, Event, To)
         silence, token_str, weapons_free, _ =
             RedGCI.buildTransmission(
                 self.Callsign,
-                hdg, tti, mode, wf,
+                hdg, tti, mode, effective_wf,
                 ip_x, ip_z, ip_y,
                 ip_y)
     else
         silence, token_str, weapons_free, _ =
             RedGCI.buildTransmission(
                 self.Callsign,
-                hdg, tti, mode, wf,
+                hdg, tti, mode, effective_wf,
                 ip_x, ip_z, ip_y,
                 t.y)   -- pass real target altitude (no offset) for ALT token
     end
