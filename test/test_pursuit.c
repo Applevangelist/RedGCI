@@ -112,18 +112,27 @@ static void test_msg_handler(void) {
 
 static void test_weapons_free(void) {
     printf("\n-- Waffenfreigabe --\n");
-    AircraftState f      = make_ac(0,0,5000,     0, 250, 250);
-    AircraftState t_tail = make_ac(0,20000,5700,  0, 220, 220);
-    AircraftState t_nose = make_ac(0,20000,5700,  0,-220, 220);
-    float aa_tail = gci_aspect_angle(&t_tail, &f);
-    float aa_nose = gci_aspect_angle(&t_nose, &f);
-    printf("  -> Tail aspect:%.1f  Nose aspect:%.1f\n", aa_tail, aa_nose);
-    CHECK(aa_tail > 150.0f, "Tail-Aspekt > 150 deg");
-    CHECK(aa_nose < 30.0f,  "Nose-Aspekt < 30 deg");
-    InterceptSolution s_tail = gci_compute_intercept(&f, &t_tail);
-    InterceptSolution s_nose = gci_compute_intercept(&f, &t_nose);
-    CHECK(s_tail.weapons_free == true,  "WF bei Tail");
-    CHECK(s_nose.weapons_free == false, "Kein WF bei Nose-on");
+    AircraftState f = make_ac(0,0,5000, 0, 250, 250);
+
+    /* Innerhalb GCI_WF_RANGE_MAX (15 km): WF unabhaengig vom Aspekt */
+    AircraftState t_close_tail = make_ac(0,12000,5700,  0,  220, 220);
+    AircraftState t_close_nose = make_ac(0,12000,5700,  0, -220, 220);
+    InterceptSolution s_ct = gci_compute_intercept(&f, &t_close_tail);
+    InterceptSolution s_cn = gci_compute_intercept(&f, &t_close_nose);
+    printf("  -> close tail WF:%d  close nose WF:%d\n",
+           s_ct.weapons_free, s_cn.weapons_free);
+    CHECK(s_ct.weapons_free == true, "WF bei Tail innerhalb 15km");
+    CHECK(s_cn.weapons_free == true, "WF bei Nose-on innerhalb 15km (R-27R front-quarter)");
+
+    /* Ausserhalb GCI_WF_RANGE_MAX (20 km): kein WF */
+    AircraftState t_far_tail = make_ac(0,20000,5700,  0,  220, 220);
+    AircraftState t_far_nose = make_ac(0,20000,5700,  0, -220, 220);
+    InterceptSolution s_ft = gci_compute_intercept(&f, &t_far_tail);
+    InterceptSolution s_fn = gci_compute_intercept(&f, &t_far_nose);
+    printf("  -> far  tail WF:%d  far  nose WF:%d\n",
+           s_ft.weapons_free, s_fn.weapons_free);
+    CHECK(s_ft.weapons_free == false, "Kein WF bei Tail ausserhalb 15km");
+    CHECK(s_fn.weapons_free == false, "Kein WF bei Nose-on ausserhalb 15km");
 }
 
 int main(void) {
