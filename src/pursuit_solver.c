@@ -199,9 +199,9 @@ InterceptSolution gci_compute_intercept(const AircraftState *f,
     sol.range        = gci_vec2_len(dx, dz);
     sol.aspect_angle = gci_aspect_angle(t, f);
 
-    // Waffenfreigabe: Heckaspekt UND innerhalb R-27 Reichweite
-    sol.weapons_free = (sol.aspect_angle > GCI_ASPECT_REAR_ATTACK)
-                    && (sol.range < GCI_WF_RANGE_MAX);
+    // Waffenfreigabe: innerhalb Radar-Lock-Reichweite (aspektunabhängig —
+    // R-27R/ER ermöglicht Front-Quarter-Schuss, Aspekt wird vom Piloten beurteilt)
+    sol.weapons_free = (sol.range < GCI_WF_RANGE_MAX);
 
     // Versuch 1: Collision Course (optimal)
     // intercept_point inkl. Look-Down Offset wird in gci_solve_collision gesetzt
