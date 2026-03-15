@@ -68,10 +68,10 @@ REDGCI.Messages = {
         COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT} Meter. Radar an. Such.",
         COMMIT_NO_LOCK      = "{CALLSIGN}, Korrektur: Peilung {ASPECT}, {RNG} Kilometer. Warum kein Lock?",
         COMMIT_NUDGE        = "{CALLSIGN}, zehn Grad nach {DIR_LR}.",
-        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Waffe frei. Angriff.",
+        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Feuer frei. Angriff.",
         RADAR_LOCK_HOLD     = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Warte auf Freigabe.",
-        RADAR_WF_NOW        = "{CALLSIGN}, Waffe frei.",
-        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Waffe frei.",
+        RADAR_WF_NOW        = "{CALLSIGN}, Feuer frei.",
+        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Feuer frei.",
         NOTCH_ENTRY         = "{CALLSIGN}, Ziel manövriert. Warten.",
         NOTCH_UPDATE        = "{CALLSIGN}, Ziel {DIR_RL}, {RNG} Kilometer. Halten.",
         ABORT_BINGO         = "{CALLSIGN}, BINGO Kraftstoff. Abbruch. Sofort zurück. Kurs {HDG}.",
@@ -83,7 +83,7 @@ REDGCI.Messages = {
         MERGE_LOST          = "{CALLSIGN}, BLIND. Kurs {HDG}.",
         MERGE_SPLASH        = "{CALLSIGN}, Treffer bestätigt. Kurs nach Hause.",
         RADAR_ON            = "{CALLSIGN}, Radar an. Such.",
-        WEAPONS_FREE        = "{CALLSIGN}, Waffe frei.",
+        WEAPONS_FREE        = "{CALLSIGN}, Feuer frei.",
     },
 
     -- ── RUSSIAN ───────────────────────────────────────────────
@@ -313,13 +313,13 @@ end
 --- Initialize MSRS + queue.
 -- @local
 function REDGCI:_InitSRS()
-    self._msrs = MSRS:New(self.SRSPath, self.SRSFreq, self.SRSMod)
+    self._msrs = MSRS:New(self.SRSPath, self.SRSFreq, self.SRSMod) -- Sound.MSRS#MSRS
     self._msrs:SetPort(self.SRSPort)
     self._msrs:SetLabel("GCI")
     self._msrs:SetCulture(self.SRSCulture)
     self._msrs:SetVoice(self.SRSVoice)
     self._msrs:SetCoalition(self.Coalition)
-    self._srs_queue = MSRSQUEUE:New("REDGCI_" .. self.Callsign)
+    self._srs_queue = MSRSQUEUE:New("REDGCI_" .. self.Callsign) -- Sound.MSRS#MSRSQUEUE
 end
 
 --- Get live unit data from a DCS group (returns first alive unit).
@@ -471,7 +471,7 @@ function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
             self._msrs,       -- MSRS instance
             delay,            -- start delay
             2,                -- priority
-            nil,              -- subgroups
+            {GROUP:FindByName(RedGCI.FIGHTER_GROUP)},            -- Subgroups (Subtitle)
             text,             -- subtitle
             self.SubtitleTime,-- subtitle duration
             nil, nil,         -- channel/mod (from msrs)
