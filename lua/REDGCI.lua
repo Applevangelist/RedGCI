@@ -38,77 +38,98 @@ REDGCI.Messages = {
 
     -- ── ENGLISH ──────────────────────────────────────────────
     en = {
-        VECTOR              = "{CALLSIGN}, VECTOR {HDG}, altitude {ALT} meters, 900 kph.",
-        VECTOR_WITH_TTI     = "{CALLSIGN}, VECTOR {HDG}, altitude {ALT} meters, 900 kph. Target in {TTI_M} minutes.",
-        COMMIT_FIRST        = "{CALLSIGN}, BOGEY ahead, {RNG} kilometers, altitude {ALT} meters. Search radar. Look.",
-        COMMIT_NO_LOCK      = "{CALLSIGN}, CORRECTION: bearing {ASPECT}, {RNG} kilometers. Why no lock?",
-        COMMIT_NUDGE        = "{CALLSIGN}, turn {DIR_LR} ten degrees.",
-        RADAR_LOCK_WF       = "{CALLSIGN}, lock confirmed. {RNG} kilometers. WEAPONS FREE. Attack.",
-        RADAR_LOCK_HOLD     = "{CALLSIGN}, lock confirmed. {RNG} kilometers. Await clearance.",
+        -- GCI → Pilot
+        VECTOR              = "{CALLSIGN}, VECTOR {HDG}, altitude {ALT}.",
+        VECTOR_WITH_TTI     = "{CALLSIGN}, VECTOR {HDG}, altitude {ALT}. Target in {TTI_M} minutes.",
+        COMMIT_FIRST        = "{CALLSIGN}, BOGEY ahead, {RNG} kilometers, altitude {ALT}. Radar on.",
+        COMMIT_NO_LOCK      = "{CALLSIGN}, CORRECTION: bearing {ASPECT}, {RNG} kilometers. No lock?",
+        COMMIT_NUDGE        = "{CALLSIGN}, {DIR_LR} ten degrees.",
+        RADAR_LOCK_WF       = "{CALLSIGN}, lock confirmed. {RNG} kilometers. WEAPONS FREE.",
+        RADAR_LOCK_HOLD     = "{CALLSIGN}, lock confirmed. {RNG} kilometers. Hold fire.",
         RADAR_WF_NOW        = "{CALLSIGN}, WEAPONS FREE.",
         VISUAL_CONFIRM      = "{CALLSIGN}, visual confirmed. WEAPONS FREE.",
         NOTCH_ENTRY         = "{CALLSIGN}, target maneuvering. Standby.",
-        NOTCH_UPDATE        = "{CALLSIGN}, target {DIR_RL}, {RNG} kilometers. Hold.",
-        ABORT_BINGO         = "{CALLSIGN}, BINGO FUEL. Break off. RTB immediately. Course {HDG}.",
-        ABORT_THREAT        = "{CALLSIGN}, THREAT WARNING. Break off. Course {HDG}, descend.",
+        NOTCH_UPDATE        = "{CALLSIGN}, target {DIR_RL}, {RNG} kilometers.",
+        ABORT_BINGO         = "{CALLSIGN}, BINGO. Break off. Course {HDG}.",
+        ABORT_THREAT        = "{CALLSIGN}, THREAT. Break off. Course {HDG}.",
         MERGE_ENTRY         = "{CALLSIGN}, contact {DIR_RL}, {ASPECT} degrees. FIGHT.",
         MERGE_OVERSHOOT     = "{CALLSIGN}, overshoot. Break {DIR_LR}.",
         MERGE_SEPARATION    = "{CALLSIGN}, separate. Climb and reset.",
         MERGE_REATTACK      = "{CALLSIGN}, reattack. Target {DIR_RL}.",
-        MERGE_LOST          = "{CALLSIGN}, BLIND. Reset heading {HDG}.",
-        MERGE_SPLASH        = "{CALLSIGN}, good kill. Return to base.",
-        RADAR_ON            = "{CALLSIGN}, radar on. Search.",
+        MERGE_LOST          = "{CALLSIGN}, BLIND. Heading {HDG}.",
+        MERGE_SPLASH        = "{CALLSIGN}, good kill. RTB.",
+        RADAR_ON            = "{CALLSIGN}, radar on.",
         WEAPONS_FREE        = "{CALLSIGN}, WEAPONS FREE.",
+        -- Pilot → GCI acknowledgements
+        ACK_VECTOR          = "Copy, {HDG}.",
+        ACK_COMMIT          = "Copy.",
+        ACK_WEAPONS_FREE    = "Copy. Engaging.",
+        ACK_ABORT           = "Copy. Breaking off.",
+        ACK_SPLASH          = "Splash. RTB.",
     },
 
     -- ── GERMAN ───────────────────────────────────────────────
     de = {
-        VECTOR              = "{CALLSIGN}, Kurs {HDG}, Höhe {ALT} Meter, neunhundert.",
-        VECTOR_WITH_TTI     = "{CALLSIGN}, Kurs {HDG}, Höhe {ALT} Meter, neunhundert. Ziel in {TTI_M} Minuten.",
-        COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT} Meter. Radar an. Suchen.",
-        COMMIT_NO_LOCK      = "{CALLSIGN}, Korrektur: Peilung {ASPECT}, {RNG} Kilometer. Warum kein Lock?",
-        COMMIT_NUDGE        = "{CALLSIGN}, zehn Grad nach {DIR_LR}.",
-        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Feuer frei. Angriff.",
-        RADAR_LOCK_HOLD     = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Warte auf Freigabe.",
+        -- GCI → Pilot
+        VECTOR              = "{CALLSIGN}, Kurs {HDG}, Höhe {ALT}.",
+        VECTOR_WITH_TTI     = "{CALLSIGN}, Kurs {HDG}, Höhe {ALT}. Ziel in {TTI_M} Minuten.",
+        COMMIT_FIRST        = "{CALLSIGN}, Ziel voraus, {RNG} Kilometer, Höhe {ALT}. Radar an.",
+        COMMIT_NO_LOCK      = "{CALLSIGN}, Korrektur: Peilung {ASPECT}, {RNG} Kilometer. Kein Lock?",
+        COMMIT_NUDGE        = "{CALLSIGN}, {DIR_LR} zehn Grad.",
+        RADAR_LOCK_WF       = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Feuer frei.",
+        RADAR_LOCK_HOLD     = "{CALLSIGN}, Lock bestätigt. {RNG} Kilometer. Warten.",
         RADAR_WF_NOW        = "{CALLSIGN}, Feuer frei.",
-        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt bestätigt. Feuer frei!",
+        VISUAL_CONFIRM      = "{CALLSIGN}, Sichtkontakt. Feuer frei.",
         NOTCH_ENTRY         = "{CALLSIGN}, Ziel manövriert. Warten.",
-        NOTCH_UPDATE        = "{CALLSIGN}, Ziel {DIR_RL}, {RNG} Kilometer. Halten.",
-        ABORT_BINGO         = "{CALLSIGN}, BINGO Kraftstoff. Abbruch. Sofort zurück. Kurs {HDG}.",
-        ABORT_THREAT        = "{CALLSIGN}, BEDROHUNG. Abbruch. Kurs {HDG}, sinken.",
-        MERGE_ENTRY         = "{CALLSIGN}, Kontakt {DIR_RL}, {ASPECT} Grad. Angriff!",
-        MERGE_OVERSHOOT     = "{CALLSIGN}, Überschuss. Ausbrechen {DIR_LR}.",
+        NOTCH_UPDATE        = "{CALLSIGN}, Ziel {DIR_RL}, {RNG} Kilometer.",
+        ABORT_BINGO         = "{CALLSIGN}, BINGO. Abbruch. Kurs {HDG}.",
+        ABORT_THREAT        = "{CALLSIGN}, BEDROHUNG. Abbruch. Kurs {HDG}.",
+        MERGE_ENTRY         = "{CALLSIGN}, Kontakt {DIR_RL}, {ASPECT} Grad. Angriff.",
+        MERGE_OVERSHOOT     = "{CALLSIGN}, Überschuss. {DIR_LR} ausbrechen.",
         MERGE_SEPARATION    = "{CALLSIGN}, trennen. Steigen und neu ansetzen.",
         MERGE_REATTACK      = "{CALLSIGN}, neu angreifen. Ziel {DIR_RL}.",
         MERGE_LOST          = "{CALLSIGN}, BLIND. Kurs {HDG}.",
-        MERGE_SPLASH        = "{CALLSIGN}, Treffer bestätigt. Kurs nach Hause.",
-        RADAR_ON            = "{CALLSIGN}, Radar an. Suchen.",
-        WEAPONS_FREE        = "{CALLSIGN}, Feuer frei!",
+        MERGE_SPLASH        = "{CALLSIGN}, Treffer. Heimkurs.",
+        RADAR_ON            = "{CALLSIGN}, Radar an.",
+        WEAPONS_FREE        = "{CALLSIGN}, Feuer frei.",
+        -- Pilot → GCI acknowledgements
+        ACK_VECTOR          = "Verstanden, Kurs {HDG}.",
+        ACK_COMMIT          = "Verstanden.",
+        ACK_WEAPONS_FREE    = "Verstanden. Greife an.",
+        ACK_ABORT           = "Verstanden. Abbruch.",
+        ACK_SPLASH          = "Treffer. Heimkurs.",
     },
 
     -- ── RUSSIAN ───────────────────────────────────────────────
     ru = {
-        VECTOR              = "{CALLSIGN}, курс {HDG}, высота {ALT}, скорость девятьсот.",
-        VECTOR_WITH_TTI     = "{CALLSIGN}, курс {HDG}, высота {ALT}, скорость девятьсот. До цели {TTI_M} минут.",
-        COMMIT_FIRST        = "{CALLSIGN}, цель впереди, дальность {RNG}, высота {ALT}. Включи локатор. Ищи.",
-        COMMIT_NO_LOCK      = "{CALLSIGN}, поправка: азимут {ASPECT}, дальность {RNG}. Почему нет захвата?",
-        COMMIT_NUDGE        = "{CALLSIGN}, довернись {DIR_LR} десять градусов.",
-        RADAR_LOCK_WF       = "{CALLSIGN}, захват подтверждён. Дальность {RNG}. Цель разрешена. Атакуй.",
-        RADAR_LOCK_HOLD     = "{CALLSIGN}, захват подтверждён. Дальность {RNG}. Жди разрешения.",
+        -- GCI → Pilot
+        VECTOR              = "{CALLSIGN}, курс {HDG}, высота {ALT}.",
+        VECTOR_WITH_TTI     = "{CALLSIGN}, курс {HDG}, высота {ALT}. До цели {TTI_M} минут.",
+        COMMIT_FIRST        = "{CALLSIGN}, цель впереди, дальность {RNG}, высота {ALT}. Локатор.",
+        COMMIT_NO_LOCK      = "{CALLSIGN}, поправка: азимут {ASPECT}, дальность {RNG}. Захват?",
+        COMMIT_NUDGE        = "{CALLSIGN}, довернись {DIR_LR}.",
+        RADAR_LOCK_WF       = "{CALLSIGN}, захват. Дальность {RNG}. Цель разрешена.",
+        RADAR_LOCK_HOLD     = "{CALLSIGN}, захват. Дальность {RNG}. Жди.",
         RADAR_WF_NOW        = "{CALLSIGN}, цель разрешена.",
         VISUAL_CONFIRM      = "{CALLSIGN}, визуальный. Цель разрешена.",
-        NOTCH_ENTRY         = "{CALLSIGN}, цель маневрирует. Жди команды.",
-        NOTCH_UPDATE        = "{CALLSIGN}, цель {DIR_RL}, дальность {RNG}. Держи.",
-        ABORT_BINGO         = "{CALLSIGN}, топливо критическое. Прекрати атаку. Немедленно домой. Курс {HDG}.",
-        ABORT_THREAT        = "{CALLSIGN}, угроза. Прекрати атаку. Курс {HDG}, снижайся.",
+        NOTCH_ENTRY         = "{CALLSIGN}, цель маневрирует. Жди.",
+        NOTCH_UPDATE        = "{CALLSIGN}, цель {DIR_RL}, дальность {RNG}.",
+        ABORT_BINGO         = "{CALLSIGN}, топливо. Прекрати. Курс {HDG}.",
+        ABORT_THREAT        = "{CALLSIGN}, угроза. Прекрати. Курс {HDG}.",
         MERGE_ENTRY         = "{CALLSIGN}, контакт {DIR_RL}, {ASPECT} градусов. Бой.",
         MERGE_OVERSHOOT     = "{CALLSIGN}, перелёт. Разворот {DIR_LR}.",
-        MERGE_SEPARATION    = "{CALLSIGN}, выход. Набери высоту и повтори.",
-        MERGE_REATTACK      = "{CALLSIGN}, повторная атака. Цель {DIR_RL}.",
-        MERGE_LOST          = "{CALLSIGN}, потеря контакта. Курс {HDG}.",
-        MERGE_SPLASH        = "{CALLSIGN}, молодец. Курс домой.",
-        RADAR_ON            = "{CALLSIGN}, включи локатор.",
+        MERGE_SEPARATION    = "{CALLSIGN}, выход. Высота, повтори.",
+        MERGE_REATTACK      = "{CALLSIGN}, повтори. Цель {DIR_RL}.",
+        MERGE_LOST          = "{CALLSIGN}, потеря. Курс {HDG}.",
+        MERGE_SPLASH        = "{CALLSIGN}, молодец. Домой.",
+        RADAR_ON            = "{CALLSIGN}, локатор.",
         WEAPONS_FREE        = "{CALLSIGN}, цель разрешена.",
+        -- Pilot → GCI acknowledgements (kurz und militärisch)
+        ACK_VECTOR          = "Понял, курс {HDG}.",
+        ACK_COMMIT          = "Понял.",
+        ACK_WEAPONS_FREE    = "Понял. Атакую.",
+        ACK_ABORT           = "Понял. Прекращаю.",
+        ACK_SPLASH          = "Цель поражена. Домой.",
     },
 }
 
@@ -150,16 +171,30 @@ function REDGCI:New(FighterGroupName, TargetGroupName, Callsign, Coalition)
     self.IsAIPlane        = true
     self.HomeBaseName     = nil
     self.HomeBase         = nil    -- Vec2 {x,y}
-    self.Debug            = false
-    self.WFRange          = 20000  -- metres: AI weapons-free range (C kernel wf=false workaround)
+    self.Debug                = false
+    self.WFRange              = 20000  -- metres: AI weapons-free range (C kernel wf=false workaround)
+    self.AltOffset            = -700   -- metres relative to target altitude for intercept waypoint.
+    self.ContactLostTimeout   = 3      -- ticks without contact before declaring target gone
+    self._contact_lost_ticks  = 0     -- internal counter
+                                   -- Negative = below target (Shootup geometry, classic Soviet doctrine
+                                   -- for radar-limited types like MiG-21/early MiG-23).
+                                   -- Zero or positive = Lookdown/Shoot-Down geometry (MiG-29, Su-27).
+                                   -- Use SetAltOffset() to override.
 
-    -- ── SRS defaults ─────────────────────────────────────────
+    -- ── SRS defaults (GCI controller voice) ──────────────────
     self.SRSPath          = nil
     self.SRSFreq          = 251
     self.SRSMod           = radio.modulation.AM
     self.SRSCulture       = "ru-RU"
     self.SRSVoice         = MSRS.Voices.Google.Standard.ru_RU_Standard_D
     self.SRSPort          = 5002
+
+    -- ── Pilot SRS defaults (separate voice for acknowledgements) ──
+    self.PilotCallsign    = nil   -- if nil, no pilot ACKs are transmitted
+    self.PilotSRSCulture  = "ru-RU"
+    self.PilotSRSVoice    = MSRS.Voices.Google.Standard.ru_RU_Standard_B
+    self._pilot_msrs      = nil
+    self._pilot_queue     = nil
 
     -- ── Internal state (per instance) ─────────────────────────
     self._pilot_flags = { radar=false, visual=false, threat=false }
@@ -234,6 +269,22 @@ function REDGCI:SetSRS(Path, Frequency, Modulation, Culture, Voice, Port)
     return self
 end
 
+--- Configure the pilot voice for radio acknowledgements.
+-- The pilot uses the same frequency/modulation as the GCI controller but
+-- a distinct voice so the two can be told apart on the radio.
+-- Set PilotCallsign to nil (default) to disable pilot ACKs entirely.
+-- @param #REDGCI self
+-- @param #string  PilotCallsign  Pilot's callsign (e.g. "Сокол-1"), or nil to disable ACKs.
+-- @param #string  Culture        BCP-47 culture string (default same as GCI)
+-- @param #string  Voice          MSRS voice constant (default ru_RU_Standard_B)
+-- @return #REDGCI self
+function REDGCI:SetPilotSRS(PilotCallsign, Culture, Voice)
+    self.PilotCallsign   = PilotCallsign
+    self.PilotSRSCulture = Culture or self.SRSCulture
+    self.PilotSRSVoice   = Voice   or MSRS.Voices.Google.Standard.ru_RU_Standard_B
+    return self
+end
+
 --- Set the GCI tick interval in seconds.
 -- @param #REDGCI self
 -- @param #number Seconds  Default 10.0
@@ -273,6 +324,50 @@ function REDGCI:SetDebug(OnOff)
     return self
 end
 
+--- Set the altitude offset applied to intercept waypoints relative to the target altitude.
+-- Models the preferred attack geometry of the fighter type:
+--
+--   Negative offset (below target) = classic Soviet Shootup doctrine.
+--     The fighter is vectored below the target so its radar looks up
+--     against a clean sky background, avoiding ground clutter.
+--     Appropriate for MiG-21, early MiG-23 (limited or no LDSD capability).
+--     Typical value: -700 m (default).
+--
+--   Zero or positive offset (at or above target) = Lookdown/Shoot-Down.
+--     The fighter has a modern pulse-Doppler radar capable of suppressing
+--     ground clutter and shooting downward.
+--     Appropriate for MiG-29 (N019), Su-27 (N001), MiG-31 (Zaslon).
+--     Typical value: 0 (level) to +300 m (slight high perch).
+--
+-- The offset is only applied during VECTOR and COMMIT states.
+-- In RADAR_CONTACT and beyond, exact geometry is driven by the C kernel.
+-- @param #REDGCI self
+-- @param #number Meters  Altitude offset in metres (default -700).
+-- @return #REDGCI self
+function REDGCI:SetAltOffset(Meters)
+    self.AltOffset = Meters or -700
+    return self
+end
+
+--- Set how many consecutive ticks without a target contact are tolerated
+-- before the GCI declares the intercept over.
+--
+-- During a contact gap the GCI transmits NOTCH_ENTRY on the first missing
+-- tick and then stays silent, holding the last known vector, until either
+-- the contact is re-acquired (counter resets) or the timeout is reached
+-- (MERGE_SPLASH + Stop).
+--
+-- One tick = TickInterval seconds (default 10 s), so the default of 3 ticks
+-- means ~30 s of tolerance — enough to cover a typical notch manoeuvre or
+-- brief Doppler blind spot without falsely declaring a kill.
+-- @param #REDGCI self
+-- @param #number Ticks  Number of ticks (default 3).
+-- @return #REDGCI self
+function REDGCI:SetContactLostTimeout(Ticks)
+    self.ContactLostTimeout = Ticks or 3
+    return self
+end
+
 --- Signal that the pilot has achieved radar lock.
 -- Equivalent to pressing "Radar Lock" in the F10 menu.
 -- @param #REDGCI self
@@ -302,11 +397,12 @@ end
 -- @param #REDGCI self
 -- @return #REDGCI self
 function REDGCI:Reset()
-    self._pilot_flags = { radar=false, visual=false, threat=false }
-    self._prev_state  = nil
-    self._prev_wf     = false
-    self._prev_radar  = false
-    self._last_tx     = { text="", time=0 }
+    self._pilot_flags        = { radar=false, visual=false, threat=false }
+    self._prev_state         = nil
+    self._prev_wf            = false
+    self._prev_radar         = false
+    self._last_tx            = { text="", time=0 }
+    self._contact_lost_ticks = 0
     RedGCI.reset(self.Callsign)
     self:_SetRadar(false)
     self:_SetWeaponsFree(false)
@@ -340,6 +436,7 @@ end
 --- Initialize MSRS + queue.
 -- @param #REDGCI self
 function REDGCI:_InitSRS()
+    -- GCI controller voice
     self._msrs = MSRS:New(self.SRSPath, self.SRSFreq, self.SRSMod) -- Sound.MSRS#MSRS
     self._msrs:SetPort(self.SRSPort)
     self._msrs:SetLabel("GCI")
@@ -347,6 +444,18 @@ function REDGCI:_InitSRS()
     self._msrs:SetVoice(self.SRSVoice)
     self._msrs:SetCoalition(self.Coalition)
     self._srs_queue = MSRSQUEUE:New("REDGCI_" .. self.Callsign) -- Sound.MSRS#MSRSQUEUE
+
+    -- Pilot voice (only when a pilot callsign has been configured)
+    if self.PilotCallsign then
+        self._pilot_msrs = MSRS:New(self.SRSPath, self.SRSFreq, self.SRSMod)
+        self._pilot_msrs:SetPort(self.SRSPort)
+        self._pilot_msrs:SetLabel("PILOT")
+        self._pilot_msrs:SetCulture(self.PilotSRSCulture)
+        self._pilot_msrs:SetVoice(self.PilotSRSVoice)
+        self._pilot_msrs:SetCoalition(self.Coalition)
+        self._pilot_queue = MSRSQUEUE:New("REDGCI_PILOT_" .. self.PilotCallsign)
+        self:_Log("Pilot SRS ready: " .. self.PilotCallsign)
+    end
 end
 
 --- Get live unit data from a DCS group (returns first alive unit).
@@ -516,7 +625,57 @@ function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
     end
 end
 
---- Push a new rolling waypoint to the AI group.
+--- Dispatch a pilot acknowledgement transmission.
+-- Uses the pilot's MSRS voice on the same frequency as GCI.
+-- The ACK key is looked up in the Messages table under the pilot locale;
+-- vars are filled identically to _Transmit so {HDG} etc. work.
+-- The ACK fires after a short realistic reaction delay (GCI_delay + ~2s).
+-- No-op when PilotCallsign is nil or pilot SRS is not initialised.
+-- @param #REDGCI self
+-- @param #string AckKey   Message key, e.g. "ACK_VECTOR"
+-- @param #table  Vars     Variable table (same format as _Transmit vars)
+-- @param #number GciDelay Delay of the preceding GCI transmission (seconds)
+function REDGCI:_TransmitPilot(AckKey, Vars, GciDelay)
+    if not self.IsAIPlane then return end
+    if not self.PilotCallsign then return end
+    if not self._pilot_queue or not self._pilot_msrs then return end
+
+    local template = self._gettext:GetEntry(AckKey, self.Locale)
+    if not template then
+        self:_Log("_TransmitPilot: no template for key=" .. AckKey)
+        return
+    end
+
+    -- Inject pilot callsign into vars
+    local v = Vars or {}
+    v.CALLSIGN = self.PilotCallsign
+
+    local text = self:_FillTemplate(template, v)
+
+    -- Pilot speaks ~2-3 s after GCI finishes (GCI delay + estimated GCI speech + reaction)
+    local pilot_delay = (GciDelay or 3.0) + 4.0
+
+    self:_Log(string.format("[PILOT/%s/%s] %s", self.Locale, AckKey, text))
+
+    self._pilot_queue:NewTransmission(
+        text,
+        nil,
+        self._pilot_msrs,
+        pilot_delay,
+        2,
+        {GROUP:FindByName(self.FighterGroupName)},
+        text,
+        self.SubtitleTime,
+        nil, nil,
+        nil, nil, nil,
+        nil,
+        "PILOT"
+    )
+
+    if self.Debug then
+        trigger.action.outText("[PILOT] " .. text, self.SubtitleTime, false)
+    end
+end
 -- @param #REDGCI self
 -- @param #number wx       DCS x coord (North)
 -- @param #number wz       DCS z coord (East)
@@ -733,20 +892,35 @@ function REDGCI:onafterStatus(From, Event, To)
     end
 
     if not t then
-        self:I(self.lid .. "Target '" .. self.TargetGroupName .. "' gone — splash/mission end.")
-        if self._prev_radar == true then
-          self:_SetRadar(false)
+        self._contact_lost_ticks = self._contact_lost_ticks + 1
+        self:I(self.lid .. "Contact lost — tick " .. self._contact_lost_ticks ..
+               "/" .. self.ContactLostTimeout)
+
+        if self._contact_lost_ticks == 1 then
+            -- First missing tick: tell pilot to stand by, keep last heading
+            self:_Transmit("NOTCH_ENTRY|delay=1.5", nil, nil)
+        elseif self._contact_lost_ticks >= self.ContactLostTimeout then
+            -- Timeout expired: target is genuinely gone (destroyed or escaped)
+            self:I(self.lid .. "Contact timeout — declaring target gone.")
+            if self._prev_radar then
+                self:_SetRadar(false)
+            end
+            self:_Transmit("MERGE_SPLASH|delay=1.5", nil, nil)
+            if self.IsAIPlane and self.HomeBase then
+                self:_PushWaypoint(
+                    self.HomeBase.x, self.HomeBase.y,
+                    1000, f.spd * 0.8, true)
+            end
+            self:Stop()
+            return
         end
-        self:_Transmit("MERGE_SPLASH|delay=1.5", nil, nil)
-        --trigger.action.outTextForCoalition(self.Coalition, "[GCI] Зона чистая.", 10)
-        if self.IsAIPlane and self.HomeBase then
-            self:_PushWaypoint(
-                self.HomeBase.x, self.HomeBase.y,
-                1000, f.spd * 0.8, true)
-        end
-        self:Stop()
+        -- Ticks 2…(timeout-1): stay silent, hold course
+        self:__Status(-self.TickInterval)
         return
     end
+
+    -- Contact (re-)acquired — reset counter
+    self._contact_lost_ticks = 0
 
     -- ── 1. Intercept geometry (C kernel) ──────────────────────
     local hdg, tti, mode, wf, range, aspect, ip_x, ip_z, ip_y =
@@ -796,6 +970,7 @@ function REDGCI:onafterStatus(From, Event, To)
 
         if state == "COMMIT" then
             self:_Transmit("RADAR_ON|delay=1.5", nil, nil)
+            self:_TransmitPilot("ACK_COMMIT", {}, 1.5)
         elseif state == "ABORT" or state == "RTB" then
             self:_SetRadar(false)
             self._prev_radar = false
@@ -804,6 +979,14 @@ function REDGCI:onafterStatus(From, Event, To)
                     self.HomeBase.x, self.HomeBase.y,
                     1000, f.spd * 0.8, true)
             end
+            -- Pilot ACK for abort includes RTB heading
+            local rtb_hdg = ""
+            if self.HomeBase then
+                local dx_h = self.HomeBase.x - f.x
+                local dz_h = self.HomeBase.y - f.z
+                rtb_hdg = string.format("%03d", math.floor(math.deg(math.atan2(dz_h, dx_h)) % 360))
+            end
+            self:_TransmitPilot("ACK_ABORT", { HDG = rtb_hdg }, 3.0)
         end
     end
 
@@ -811,7 +994,7 @@ function REDGCI:onafterStatus(From, Event, To)
     if state == "VECTOR" then
         self:_SetRadar(false)
         local cruise_spd    = math.max(f.spd, 200)
-        local wx, wz, wy    = self:_ComputeRollingWaypoint(f, ip_x, ip_z, ip_y)
+        local wx, wz, wy    = self:_ComputeRollingWaypoint(f, ip_x, ip_z, ip_y + self.AltOffset)
         self:_PushWaypoint(wx, wz, wy, cruise_spd)
 
     elseif state == "COMMIT" or state == "RADAR_CONTACT" then
@@ -819,7 +1002,7 @@ function REDGCI:onafterStatus(From, Event, To)
            self:_SetRadar(true)
            self._prev_radar = true        
         end
-        local wx, wz, wy = self:_ComputeRollingWaypoint(f, ip_x, ip_z, ip_y)
+        local wx, wz, wy = self:_ComputeRollingWaypoint(f, ip_x, ip_z, ip_y + self.AltOffset)
         self:_PushWaypoint(wx, wz, wy, f.spd)
 
     elseif state == "NOTCH" then
@@ -890,11 +1073,20 @@ function REDGCI:onafterStatus(From, Event, To)
         local dir_lr = self:_DeriveDirLR(aspect)
         local dir_rl = self:_DeriveDirRL(f, t)
         self:_Transmit(token_str, dir_lr, dir_rl)
+
+        -- Pilot ACK for VECTOR (includes heading repeat — feels most natural)
+        if state == "VECTOR" then
+            local gci_delay = tonumber(token_str and token_str:match("delay=([%d%.]+)")) or 3.0
+            self:_TransmitPilot("ACK_VECTOR",
+                { HDG = string.format("%03d", math.floor(hdg)) },
+                gci_delay)
+        end
     end
 
     -- Weapons free edge: fire once on first transition
     if weapons_free and not self._prev_wf then
         self:_Transmit("WEAPONS_FREE|delay=1.0", nil, nil)
+        self:_TransmitPilot("ACK_WEAPONS_FREE", {}, 1.0)
         self:_SetRadar(true)
         self:_SetWeaponsFree(true)
         self._prev_radar = true
