@@ -31,9 +31,12 @@ local gci = REDGCI:New("Mig-29A", "Target", "Сокол-1", coalition.side.RED)
 gci:SetLocale("ru")
 gci:SetAIMode(true, AIRBASE.Caucasus.Nalchik)
 gci:SetSRS(nil, 251, radio.modulation.AM,
-           "ru-RU", MSRS.Voices.Google.Wavenet.de_DE_Wavenet_G, 5002)
+           "ru-RU", MSRS.Voices.Google.Wavenet.ru_RU_Wavenet_D, 5002)
+gci:SetPilotSRS("Сокол-1",
+           "ru-RU", MSRS.Voices.Google.Wavenet.ru_RU_Wavenet_B)
 gci:SetTickInterval(10)
 gci:SetTxRepeatInterval(30)
+gci:SetAltOffset(0)    -- MiG-29: N019-Radar, LDSD-fähig → kein Höhenversatz nötig
 gci:SetDebug(true)
 
 -- ──────────────────────────────────────────────────────────────
