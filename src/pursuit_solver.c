@@ -200,8 +200,14 @@ InterceptSolution gci_compute_intercept(const AircraftState *f,
     sol.aspect_angle = gci_aspect_angle(t, f);
 
     // Waffenfreigabe: innerhalb Radar-Lock-Reichweite (aspektunabhängig —
-    // R-27R/ER ermöglicht Front-Quarter-Schuss, Aspekt wird vom Piloten beurteilt)
-    sol.weapons_free = (sol.range < GCI_WF_RANGE_MAX);
+    // R-27R/ER ermöglicht Front-Quarter-Schuss, Aspekt wird vom Piloten beurteilt).
+    // Projektion: Wenn der Jäger die WF-Grenze innerhalb des nächsten Ticks
+    // (GCI_TICK_INTERVAL) erreicht, wird WF sofort gesetzt, damit die Freigabe
+    // nicht eine volle Runde zu spät kommt.
+    float closure          = gci_closure_rate(f, t);
+    float projected_range  = sol.range - closure * GCI_TICK_INTERVAL;
+    sol.weapons_free = (sol.range < GCI_WF_RANGE_MAX) ||
+                       (closure > 0.0f && projected_range < GCI_WF_RANGE_MAX);
 
     // Versuch 1: Collision Course (optimal)
     // intercept_point inkl. Look-Down Offset wird in gci_solve_collision gesetzt

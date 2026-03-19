@@ -236,20 +236,32 @@ static void test_weapons_free(void) {
     CHECK(s_ct.weapons_free == true, "WF bei Tail innerhalb 25km");
     CHECK(s_cn.weapons_free == true, "WF bei Nose-on innerhalb 25km (R-27ER front-quarter)");
 
-    /* Ausserhalb GCI_WF_RANGE_MAX (>= 25 km): kein WF */
+    /* Ausserhalb 25km, Tail: Ziel entfernt sich leicht -> Closure gering,
+     * Projektion reicht nicht -> kein WF */
     AircraftState t_far_tail = make_ac(0,30000,5700,  0,  220, 220);
-    AircraftState t_far_nose = make_ac(0,30000,5700,  0, -220, 220);
     InterceptSolution s_ft = gci_compute_intercept(&f, &t_far_tail);
-    InterceptSolution s_fn = gci_compute_intercept(&f, &t_far_nose);
-    printf("  -> far  tail WF:%d  far  nose WF:%d\n",
-           s_ft.weapons_free, s_fn.weapons_free);
-    CHECK(s_ft.weapons_free == false, "Kein WF bei Tail ausserhalb 25km");
-    CHECK(s_fn.weapons_free == false, "Kein WF bei Nose-on ausserhalb 25km");
+    /* Closure ~ 30 m/s, projected ~ 29550m > 25000 -> kein WF */
+    printf("  -> far  tail WF:%d\n", s_ft.weapons_free);
+    CHECK(s_ft.weapons_free == false, "Kein WF: Tail 30km, Closure zu gering fuer Projektion");
 
-    /* Grenzfall: genau 25km (WF = false, da < nicht <=) */
-    AircraftState t_boundary = make_ac(0,25000,5700,  0,  220, 220);
-    InterceptSolution s_b = gci_compute_intercept(&f, &t_boundary);
-    CHECK(s_b.weapons_free == false, "Kein WF genau an Grenze 25km");
+    /* Projektion (1): Ziel ausserhalb aber Closure hoch genug.
+     * Jaeger 250 m/s Nord, Ziel 26500m statisch.
+     * Closure ~ 250 m/s -> projected ~ 22750m < 25000 -> sofortige WF */
+    AircraftState t_proj = make_ac(0,26500,5700,  0,  0, 0);
+    InterceptSolution s_p = gci_compute_intercept(&f, &t_proj);
+    CHECK(s_p.weapons_free == true, "WF durch Projektion: statisches Ziel bei 26.5km");
+
+    /* Projektion (2): Nose-on bei 30km, kombinierte Closure ~470 m/s.
+     * projected ~ 22950m < 25000 -> sofortige WF */
+    AircraftState t_far_nose = make_ac(0,30000,5700,  0, -220, 220);
+    InterceptSolution s_fn = gci_compute_intercept(&f, &t_far_nose);
+    printf("  -> far  nose WF:%d\n", s_fn.weapons_free);
+    CHECK(s_fn.weapons_free == true, "WF durch Projektion: Nose-on 30km mit hoher Closure");
+
+    /* Gegenprobe: Ziel zu weit entfernt, auch Projektion reicht nicht */
+    AircraftState t_noproj = make_ac(0,45000,5700,  0,  0, 0);
+    InterceptSolution s_np = gci_compute_intercept(&f, &t_noproj);
+    CHECK(s_np.weapons_free == false, "Kein WF: Ziel 45km, auch projiziert ausserhalb");
 }
 
 int main(void) {
