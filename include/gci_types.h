@@ -149,6 +149,8 @@ typedef struct {
 #define GCI_DELAY_MERGE_MIN         2.0f    // Schneller im Merge
 #define GCI_DELAY_MERGE_MAX         4.0f
 
+#define GCI_TICK_INTERVAL          15.0f    // SRS-Tick in Sekunden
+
 // ─────────────────────────────────────────────────────────────
 //  Hilfsmakros
 // ─────────────────────────────────────────────────────────────
