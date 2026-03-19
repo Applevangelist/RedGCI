@@ -131,7 +131,7 @@ typedef struct {
 
 #define GCI_RANGE_VECTOR_START   60000.0f   // 60km  – Erste Vektierung
 #define GCI_RANGE_COMMIT         30000.0f   // 30km  – Radar einschalten
-#define GCI_RANGE_RADAR_FLOOR    15000.0f   // 15km  – Lock erwartet
+#define GCI_RANGE_RADAR_FLOOR    20000.0f   // 20km  – Lock erwartet
 #define GCI_RANGE_VISUAL          5000.0f   //  5km  – Sicht erwartet
 #define GCI_RANGE_MERGE           2000.0f   //  2km  – Merge
 
@@ -141,7 +141,7 @@ typedef struct {
 #define GCI_ASPECT_REAR_ATTACK     120.0f   // Heckschuss-Aspekt
 
 #define GCI_FUEL_BINGO              0.25f   // 25% – Rückkehr
-#define GCI_WF_RANGE_MAX          20000.0f  // Waffenfreigabe-Range (R-27ER effective BVR)
+#define GCI_WF_RANGE_MAX          25000.0f  // Waffenfreigabe-Range (R-27ER effective BVR)
 #define GCI_MAX_TTI                 600.0f  // 10 Minuten – Limit
 
 #define GCI_DELAY_MIN               3.0f    // Funkverzögerung Sekunden
