@@ -125,8 +125,8 @@ static void test_weapons_free(void) {
     CHECK(s_cn.weapons_free == true, "WF bei Nose-on innerhalb 20km (R-27R front-quarter)");
 
     /* Ausserhalb GCI_WF_RANGE_MAX (>= 25 km): kein WF */
-    AircraftState t_far_tail = make_ac(0,24000,5700,  0,  220, 220);
-    AircraftState t_far_nose = make_ac(0,24000,5700,  0, -220, 220);
+    AircraftState t_far_tail = make_ac(0,20000,5700,  0,  220, 220);
+    AircraftState t_far_nose = make_ac(0,20000,5700,  0, -220, 220);
     InterceptSolution s_ft = gci_compute_intercept(&f, &t_far_tail);
     InterceptSolution s_fn = gci_compute_intercept(&f, &t_far_nose);
     printf("  -> far  tail WF:%d  far  nose WF:%d\n",
