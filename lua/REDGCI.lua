@@ -847,6 +847,101 @@ function REDGCI:_SetupF10Menu()
         end)
 end
 
+---
+-- ══════════════════════════════════════════════════════════════════
+--  Part 2 — REDGCI Intel source integration
+--
+--  When an INTEL source is attached, REDGCI derives the intercept target
+--  from the INTEL contact table instead of polling a fixed group name.
+--  Selection criterion: highest threat-level aircraft contact.
+--  Tie-break: closest to the fighter.
+--
+--  The INTEL contact's position/velocity are used directly, so the GCI
+--  works even after the real unit is lost from DCS sensor view (INTEL
+--  keeps a prediction window of up to 10 min for aircraft).
+-- ══════════════════════════════════════════════════════════════════
+
+--- Attach an INTEL object as the target source for this GCI instance.
+-- When set, REDGCI picks the highest-threat aircraft contact from INTEL
+-- on every tick instead of polling a fixed target group name.
+-- The GCI continues to work with INTEL's predicted positions during
+-- contact gaps (up to INTEL's configured forget window).
+-- @param #REDGCI self
+-- @param Ops.Intel#INTEL Intel INTEL instance (must be Started/Running).
+-- @param #string Filter (optional) Only consider contacts whose group name
+--                contains this substring (case-sensitive).
+-- @return #REDGCI self
+function REDGCI:SetIntelSource(Intel, Filter)
+    self.Intel             = Intel
+    self.IntelTargetFilter = Filter
+    self:I(self.lid .. "Intel source set: " ..
+           (Intel and Intel.alias or "nil") ..
+           (Filter and (" filter='" .. Filter .. "'") or ""))
+    return self
+end
+
+--- (Internal) Derive intercept target data from the attached INTEL.
+-- Returns a unit-data table identical in structure to _GetUnitData(),
+-- or nil when no suitable contact is available.
+-- @param #REDGCI self
+-- @param #table FighterData  Fighter unit data (for proximity tie-break).
+-- @return #table or nil
+function REDGCI:_GetTargetFromIntel(FighterData)
+    if not self.Intel or not self.Intel:Is("Running") then return nil end
+
+    local contacts = self.Intel:GetContactTable()
+    if not contacts then return nil end
+
+    local best      = nil
+    local bestScore = -math.huge
+
+    for _, contact in pairs(contacts) do --#INTEL.Contact
+
+        -- Aircraft contacts only
+        if contact.ctype == INTEL.Ctype.AIRCRAFT then
+
+        -- Optional name filter
+        if self.IntelTargetFilter and
+           not string.find(contact.groupname, self.IntelTargetFilter, 1, true) then
+           -- goto continue
+        end
+
+        if not contact.position then end --goto continue end
+
+        local pos = contact.position
+        local dx  = pos.x - FighterData.x
+        local dz  = pos.z - FighterData.z
+        local rng = math.sqrt(dx * dx + dz * dz)
+
+        -- Score: threat level primary; range as tie-break (closer = higher)
+        local score = (contact.threatlevel or 0) * 100000 - rng
+
+        if score > bestScore then
+            bestScore = score
+            best = contact
+        end
+      end
+    end
+
+    if not best then return nil end
+
+    local pos = best.position
+    local vel = best.velocity or { x = 0, y = 0, z = 0 }
+    local alt = best.altitude or (pos and pos.y) or 0
+
+    return {
+        x    = pos.x,
+        y    = alt,
+        z    = pos.z,
+        spd  = best.speed or 0,
+        vx   = vel.x or 0,
+        vy   = vel.y or 0,
+        vz   = vel.z or 0,
+        hdg  = best.heading or 0,
+        fuel = 1.0,  -- not available from INTEL
+    }
+end
+
 -- ─────────────────────────────────────────────────────────────
 --  FSM handlers
 -- ─────────────────────────────────────────────────────────────
