@@ -601,19 +601,23 @@ function REDGCI:_Transmit(TokenStr, DirLR, DirRL)
       
     if self._srs_queue and self._msrs then
         local delay = tok.delay or 3.0
+        --MSRSQUEUE:NewTransmission(text, duration, msrs, tstart, interval, subgroups, subtitle, subduration, frequency, modulation, gender, culture, voice, volume, label,coordinate,speed,speaker)
         self._srs_queue:NewTransmission(
             text,             -- message text
             nil,              -- duration (auto)
             self._msrs,       -- MSRS instance
             delay,            -- start delay
-            2,                -- priority
+            1,                -- interval
             {GROUP:FindByName(RedGCI.FIGHTER_GROUP)},            -- Subgroups (Subtitle)
             text,             -- subtitle
             self.SubtitleTime,-- subtitle duration
             nil, nil,         -- channel/mod (from msrs)
             nil, nil, nil,    -- gender/culture/voice (from msrs)
             nil,              -- volume
-            "GCI"             -- label
+            "GCI",            -- label
+            nil,              -- coordinate
+            1.2,              -- speed
+            nil               -- speaker
         )
     else
         -- Fallback: on-screen text
@@ -662,20 +666,24 @@ function REDGCI:_TransmitPilot(AckKey, Vars, GciDelay)
         nil,
         self._pilot_msrs,
         pilot_delay,
-        2,
+        1,
         {GROUP:FindByName(self.FighterGroupName)},
         text,
         self.SubtitleTime,
         nil, nil,
         nil, nil, nil,
         nil,
-        "PILOT"
+        "PILOT",
+        nil,
+        1.2
     )
 
     if self.Debug then
         trigger.action.outText("[PILOT] " .. text, self.SubtitleTime, false)
     end
 end
+
+---
 -- @param #REDGCI self
 -- @param #number wx       DCS x coord (North)
 -- @param #number wz       DCS z coord (East)
@@ -721,7 +729,7 @@ function REDGCI:_PushWaypoint(wx, wz, wy, SpeedMps, LandHome)
             speed_tas, true, nil, tsk, "VECTOR")
     end
 
-    grp:Route({ wp0, wp1 }, 0.2)
+    grp:Route({ wp0, wp1 }, 1)
     self:_Log(string.format("WP → x=%.0f z=%.0f alt=%.0fm spd=%.0f kph TAS=%.0f kph",
                             wx, wz, safe_alt, kmph, speed_tas))
 end
@@ -786,7 +794,7 @@ function REDGCI:_SetWeaponsFree(On)
       --grp:SetOptionRadarUsingForContinousSearch()
       grp:OptionROEWeaponFree()
       grp:OptionAlarmStateRed()
-      grp:OptionAAAttackRange(1)
+      grp:OptionAAAttackRange(2)
     else
       --grp:SetOptionRadarUsingNever()
       grp:OptionROEHoldFire()
@@ -1095,6 +1103,7 @@ function REDGCI:onafterStatus(From, Event, To)
     elseif state == "COMMIT" or state == "RADAR_CONTACT" then
         if self._prev_radar == false then
            self:_SetRadar(true)
+           self:_SetWeaponsFree(true)
            self._prev_radar = true        
         end
         local wx, wz, wy = self:_ComputeRollingWaypoint(f, ip_x, ip_z, ip_y + self.AltOffset)
@@ -1154,7 +1163,7 @@ function REDGCI:onafterStatus(From, Event, To)
                 self.Callsign,
                 hdg, tti, mode, effective_wf,
                 ip_x, ip_z, ip_y,
-                ip_y)
+                ip_y + self.AltOffset)
     else
         silence, token_str, weapons_free, _ =
             RedGCI.buildTransmission(
