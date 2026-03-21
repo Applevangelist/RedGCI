@@ -22,4 +22,22 @@ float gci_aspect_angle   (const AircraftState *target,
                           const AircraftState *observer);
 float gci_closure_rate   (const AircraftState *f, const AircraftState *t);
 
+// ─────────────────────────────────────────────────────────────
+//  2v2 Taktik-Split-Rechner
+//
+//  Berechnet Split- und Merge-Einflugpunkte für zwei Fighter
+//  gegen einen Ziel-Mittelpunkt.  Einmalig bei COMMIT aufgerufen;
+//  Lua passt den merge_f1/f2-Punkt jeden Tick dynamisch nach.
+//
+//  Koordinaten: GCI-intern (x=Ost, z=Nord, y=Höhe)
+//  tactic:    TACTIC_PINCER | HIGH_LOW | STAGGER | TRAIL
+//  variation: 0.0–1.0 (Zufallsanteil für Unberechenbarkeit)
+// ─────────────────────────────────────────────────────────────
+TacticSplitPlan gci_compute_split(
+    const AircraftState *f1,
+    const AircraftState *f2,
+    float tgt_x, float tgt_z, float tgt_y,
+    TacticType  tactic,
+    float       variation);
+
 #endif

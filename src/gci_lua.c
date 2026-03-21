@@ -397,7 +397,87 @@ static int l_merge_update(lua_State *L) {
 
 
 /* ═════════════════════════════════════════════════════════════
- *  6.  gci_version  (Debugging)
+ *  6.  gci_compute_split  (2v2 Taktik-Split)
+ *
+ *  Berechnet Split- und Merge-Einflugpunkte für zwei Fighter.
+ *  Einmalig bei COMMIT aufgerufen; merge-WPs werden jeden Tick
+ *  vom Lua-Layer nachgeführt.
+ *
+ *  Lua-Signatur:
+ *    wp1_x,wp1_z,wp1_y, wp2_x,wp2_z,wp2_y,
+ *    mp1_x,mp1_z,mp1_y, mp2_x,mp2_z,mp2_y =
+ *        gci_compute_split(
+ *            f1_x, f1_y, f1_z,      -- DCS-Koordinaten Fighter 1
+ *            f2_x, f2_y, f2_z,      -- DCS-Koordinaten Fighter 2
+ *            tgt_x, tgt_y, tgt_z,   -- DCS Ziel-Mittelpunkt
+ *            tactic,                -- 0=PINCER,1=HIGH_LOW,2=STAGGER,3=TRAIL
+ *            variation)             -- 0.0–1.0 Zufallsanteil
+ *
+ *  Alle Koordinaten in DCS-Format (x=Nord, y=Höhe, z=Ost).
+ *  Rückgabe: 12 Werte (4 WPs × 3), ebenfalls DCS-Format.
+ *  Namenskonvention: wp_x = DCS-x (Nord), wp_z = DCS-z (Ost).
+ * ═════════════════════════════════════════════════════════════ */
+
+static int l_compute_split(lua_State *L) {
+    ensure_init();
+
+    AircraftState f1, f2;
+    memset(&f1, 0, sizeof(f1));
+    memset(&f2, 0, sizeof(f2));
+
+    /* Mapping: DCS x(Nord)→GCI z, DCS y(Höhe)→GCI y, DCS z(Ost)→GCI x */
+
+    /* Fighter 1: args 1-3 */
+    f1.pos.z = GETF(L, 1);   /* DCS x (Nord) → GCI z */
+    f1.pos.y = GETF(L, 2);   /* DCS y (Höhe) → GCI y */
+    f1.pos.x = GETF(L, 3);   /* DCS z (Ost)  → GCI x */
+
+    /* Fighter 2: args 4-6 */
+    f2.pos.z = GETF(L, 4);
+    f2.pos.y = GETF(L, 5);
+    f2.pos.x = GETF(L, 6);
+
+    /* Ziel-Mittelpunkt: args 7-9 */
+    float tgt_z = GETF(L, 7);   /* DCS x (Nord) → GCI z */
+    float tgt_y = GETF(L, 8);   /* Höhe          → GCI y */
+    float tgt_x = GETF(L, 9);   /* DCS z (Ost)  → GCI x */
+
+    int   tactic_int = (int)luaL_checkinteger(L, 10);
+    float variation  = GETF(L, 11);
+
+    if (tactic_int < 0 || tactic_int > 3) tactic_int = 0;
+    if (variation  < 0.0f) variation = 0.0f;
+    if (variation  > 1.0f) variation = 1.0f;
+
+    TacticSplitPlan plan = gci_compute_split(
+        &f1, &f2,
+        tgt_x, tgt_z, tgt_y,
+        (TacticType)tactic_int,
+        variation);
+
+    /* Rückgabe: GCI→DCS  (GCI z/Nord→DCS x,  GCI x/Ost→DCS z,  y=y) */
+    /* wp_f1 */
+    lua_pushnumber(L, plan.wp_f1.z);    /* DCS x (Nord) */
+    lua_pushnumber(L, plan.wp_f1.x);    /* DCS z (Ost)  */
+    lua_pushnumber(L, plan.wp_f1.y);    /* Höhe         */
+    /* wp_f2 */
+    lua_pushnumber(L, plan.wp_f2.z);
+    lua_pushnumber(L, plan.wp_f2.x);
+    lua_pushnumber(L, plan.wp_f2.y);
+    /* merge_f1 */
+    lua_pushnumber(L, plan.merge_f1.z);
+    lua_pushnumber(L, plan.merge_f1.x);
+    lua_pushnumber(L, plan.merge_f1.y);
+    /* merge_f2 */
+    lua_pushnumber(L, plan.merge_f2.z);
+    lua_pushnumber(L, plan.merge_f2.x);
+    lua_pushnumber(L, plan.merge_f2.y);
+    return 12;
+}
+
+
+/* ═════════════════════════════════════════════════════════════
+ *  7.  gci_version  (Debugging)
  *
  *  Lua-Signatur:
  *    version_string = gci_version()
@@ -415,6 +495,7 @@ static int l_version(lua_State *L) {
 
 static const luaL_Reg gci_funcs[] = {
     { "gci_compute_intercept", l_compute_intercept },
+    { "gci_compute_split",     l_compute_split     },
     { "gci_fsm_update",        l_fsm_update        },
     { "gci_fsm_transmission",  l_fsm_transmission  },
     { "gci_fsm_reset",         l_fsm_reset         },
