@@ -135,7 +135,7 @@ typedef struct {
 #define GCI_RANGE_VISUAL          5000.0f   //  5km  – Sicht erwartet
 #define GCI_RANGE_MERGE           2000.0f   //  2km  – Merge
 
-#define GCI_ALT_OFFSET_LOOKDOWN    700.0f   // Meter über Ziel (Look-Down)
+#define GCI_ALT_OFFSET_LOOKDOWN      0.0f   // Meter über Ziel (Look-Down)
 #define GCI_ASPECT_NOTCH_MIN        80.0f   // Grad – Notch-Bereich
 #define GCI_ASPECT_NOTCH_MAX       100.0f
 #define GCI_ASPECT_REAR_ATTACK     120.0f   // Heckschuss-Aspekt
