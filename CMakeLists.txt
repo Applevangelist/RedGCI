@@ -119,12 +119,20 @@ endif()
 # ── Tests ─────────────────────────────────────────────────────
 if(BUILD_TESTS)
     enable_testing()
+
     add_executable(gci_tests test/test_pursuit.c)
     target_link_libraries(gci_tests gci_core)
     if(NOT MSVC)
         target_link_libraries(gci_tests m)
     endif()
     add_test(NAME pursuit_tests COMMAND gci_tests)
+
+    add_executable(gci_2v2_tests test/test_2v2_split.c)
+    target_link_libraries(gci_2v2_tests gci_core)
+    if(NOT MSVC)
+        target_link_libraries(gci_2v2_tests m)
+    endif()
+    add_test(NAME split_2v2_tests COMMAND gci_2v2_tests)
 endif()
 
 # ── Lua-Dateien ins Build-Verzeichnis ─────────────────────────

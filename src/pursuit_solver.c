@@ -1,6 +1,7 @@
 #include "pursuit_solver.h"
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 // ─────────────────────────────────────────────────────────────
 //  Aspect Angle: Winkel zwischen Ziel-Heading und Linie Ziel→Beobachter
@@ -233,4 +234,158 @@ InterceptSolution gci_compute_intercept(const AircraftState *f,
     /* vel.y weglassen — vertikale Bewegung für TTI-Approximation ignorieren */
 
     return sol;
+}
+
+
+// ─────────────────────────────────────────────────────────────
+//  2v2 TAKTIK-SPLIT RECHNER
+//
+//  Koordinatensystem: GCI-intern (x=Ost, z=Nord, y=Höhe)
+//
+//  Gemeinsame Geometrie:
+//    Formationsmitte → Ziel ergibt den Angriffsvektor (ax, az).
+//    Senkrechter Vektor (90° links): px=-az, pz=ax.
+//    "variation" skaliert die taktischen Spreizabstände, damit
+//    kein Angriff identisch aussieht.
+//
+//  Minimalhöhe: 300 m MSL (alle Ausgabe-WPs geclampt).
+// ─────────────────────────────────────────────────────────────
+
+static void clamp_alt(Vec3 *v) {
+    if (v->y < 300.0f) v->y = 300.0f;
+}
+
+TacticSplitPlan gci_compute_split(
+    const AircraftState *f1,
+    const AircraftState *f2,
+    float tgt_x, float tgt_z, float tgt_y,
+    TacticType  tactic,
+    float       variation)
+{
+    TacticSplitPlan plan;
+    memset(&plan, 0, sizeof(plan));
+    plan.tactic = tactic;
+
+    // ── Formationsmitte ──────────────────────────────────────
+    float mid_x = (f1->pos.x + f2->pos.x) * 0.5f;
+    float mid_z = (f1->pos.z + f2->pos.z) * 0.5f;
+
+    // ── Normierter Angriffsvektor Mitte → Ziel ───────────────
+    float dx  = tgt_x - mid_x;
+    float dz  = tgt_z - mid_z;
+    float rng = gci_vec2_len(dx, dz);
+    if (rng < 1.0f) rng = 1.0f;
+    float ax = dx / rng;   // Angriffsvektor x (Ost)
+    float az = dz / rng;   // Angriffsvektor z (Nord)
+
+    // ── Senkrechter Vektor (90° links) ───────────────────────
+    float px = -az;
+    float pz =  ax;
+
+    switch (tactic) {
+
+        // ── ZANGE: laterale Einhüllung ────────────────────────
+        case TACTIC_PINCER: {
+            // Spreizung 8–12 km je nach Variation
+            float spread   = 8000.0f + variation * 4000.0f;
+            // WP liegt 65 % des Weges zwischen Formation und Ziel
+            float approach = rng * 0.65f;
+            float merge_off = spread * 0.20f;  // leichter Versatz am Merge
+
+            plan.wp_f1.x = mid_x + ax * approach + px * spread;
+            plan.wp_f1.z = mid_z + az * approach + pz * spread;
+            plan.wp_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+
+            plan.wp_f2.x = mid_x + ax * approach - px * spread;
+            plan.wp_f2.z = mid_z + az * approach - pz * spread;
+            plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+
+            // Merge: beide konvergieren auf Zielpunkt, leicht seitlich
+            plan.merge_f1.x = tgt_x + px * merge_off;
+            plan.merge_f1.z = tgt_z + pz * merge_off;
+            plan.merge_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+
+            plan.merge_f2.x = tgt_x - px * merge_off;
+            plan.merge_f2.z = tgt_z - pz * merge_off;
+            plan.merge_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            break;
+        }
+
+        // ── HOCH-TIEF: vertikale Trennung ─────────────────────
+        case TACTIC_HIGH_LOW: {
+            float vert     = 3000.0f + variation * 1000.0f;  // 3–4 km
+            float approach = rng * 0.70f;
+
+            // f1: tief (Shootup-Geometrie)
+            plan.wp_f1.x = mid_x + ax * approach;
+            plan.wp_f1.z = mid_z + az * approach;
+            plan.wp_f1.y = tgt_y - 400.0f;
+
+            // f2: hoch (Shootdown-Geometrie)
+            plan.wp_f2.x = mid_x + ax * approach;
+            plan.wp_f2.z = mid_z + az * approach;
+            plan.wp_f2.y = tgt_y + vert;
+
+            // Merge: gleiche x/z wie Ziel, individuelle Höhen beibehalten
+            plan.merge_f1.x = plan.merge_f2.x = tgt_x;
+            plan.merge_f1.z = plan.merge_f2.z = tgt_z;
+            plan.merge_f1.y = plan.wp_f1.y;
+            plan.merge_f2.y = plan.wp_f2.y;
+            break;
+        }
+
+        // ── STAFFEL: BVR-Führung + BVR-Support ────────────────
+        case TACTIC_STAGGER: {
+            float lag = 12000.0f + variation * 3000.0f;  // 12–15 km
+
+            // f1: primärer Intercept (BVR-Führung)
+            plan.wp_f1.x = tgt_x;
+            plan.wp_f1.z = tgt_z;
+            plan.wp_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+
+            // f2: gestaffelt zurück (BVR-Support, Folgeschuss)
+            plan.wp_f2.x = tgt_x - ax * lag;
+            plan.wp_f2.z = tgt_z - az * lag;
+            plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+
+            plan.merge_f1 = plan.wp_f1;
+            plan.merge_f2 = plan.wp_f2;
+            break;
+        }
+
+        // ── TRAIL: enger Heckangriff ───────────────────────────
+        case TACTIC_TRAIL: {
+            float lag = 3000.0f + variation * 2000.0f;  // 3–5 km
+
+            plan.wp_f1.x = tgt_x;
+            plan.wp_f1.z = tgt_z;
+            plan.wp_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+
+            plan.wp_f2.x = tgt_x - ax * lag;
+            plan.wp_f2.z = tgt_z - az * lag;
+            plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+
+            plan.merge_f1 = plan.wp_f1;
+            plan.merge_f2 = plan.wp_f2;
+            break;
+        }
+
+        // ── Fallback: beide direkt auf Ziel ───────────────────
+        default: {
+            plan.wp_f1.x = plan.wp_f2.x = tgt_x;
+            plan.wp_f1.z = plan.wp_f2.z = tgt_z;
+            plan.wp_f1.y = plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            plan.merge_f1 = plan.wp_f1;
+            plan.merge_f2 = plan.wp_f2;
+            break;
+        }
+    }
+
+    // Sicherheitscheck: 300 m Mindesthöhe MSL
+    clamp_alt(&plan.wp_f1);
+    clamp_alt(&plan.wp_f2);
+    clamp_alt(&plan.merge_f1);
+    clamp_alt(&plan.merge_f2);
+
+    return plan;
 }

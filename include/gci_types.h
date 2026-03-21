@@ -152,6 +152,26 @@ typedef struct {
 #define GCI_TICK_INTERVAL          15.0f    // SRS-Tick in Sekunden
 
 // ─────────────────────────────────────────────────────────────
+//  2v2 Taktik-Typen und Split-Plan
+//  Wird bei COMMIT berechnet und pro Tick nachgeführt.
+// ─────────────────────────────────────────────────────────────
+
+typedef enum {
+    TACTIC_PINCER   = 0,  // Zange: laterale Einhüllung (links/rechts)
+    TACTIC_HIGH_LOW = 1,  // Hoch-Tief: vertikale Trennung
+    TACTIC_STAGGER  = 2,  // Staffel: BVR-Führung + 12–15 km Abstand
+    TACTIC_TRAIL    = 3,  // Trail: enger Heckangriff 3–5 km
+} TacticType;
+
+typedef struct {
+    Vec3       wp_f1;      // Split-Wegpunkt Fighter 1 (GCI-Koordinaten)
+    Vec3       wp_f2;      // Split-Wegpunkt Fighter 2 (GCI-Koordinaten)
+    Vec3       merge_f1;   // Merge-Einflugpunkt Fighter 1
+    Vec3       merge_f2;   // Merge-Einflugpunkt Fighter 2
+    TacticType tactic;
+} TacticSplitPlan;
+
+// ─────────────────────────────────────────────────────────────
 //  Hilfsmakros
 // ─────────────────────────────────────────────────────────────
 

@@ -194,4 +194,26 @@ function RedGCI.reset(callsign)
     RedGCI.releaseCtx(callsign)
 end
 
+-- ──────────────────────────────────────────────────────────────
+--  2v2 Taktik-Split
+--  Berechnet Split- und Merge-Einflugpunkte für 2 Fighter.
+--  f1, f2, tgt: Unit-Datentabellen mit Feldern {x, y, z}
+--  tactic:    0=PINCER, 1=HIGH_LOW, 2=STAGGER, 3=TRAIL
+--  variation: 0.0–1.0 (Zufallsanteil; math.random() empfohlen)
+--
+--  Rückgabe (12 Werte, DCS-Koordinaten):
+--    wp1_x, wp1_z, wp1_y   -- Split-WP Fighter 1
+--    wp2_x, wp2_z, wp2_y   -- Split-WP Fighter 2
+--    mp1_x, mp1_z, mp1_y   -- Merge-Einflugpunkt Fighter 1
+--    mp2_x, mp2_z, mp2_y   -- Merge-Einflugpunkt Fighter 2
+-- ──────────────────────────────────────────────────────────────
+function RedGCI.computeSplit(f1, f2, tgt, tactic, variation)
+    return _gci.gci_compute_split(
+        f1.x,  f1.y,  f1.z,
+        f2.x,  f2.y,  f2.z,
+        tgt.x, tgt.y, tgt.z,
+        tactic    or 0,
+        variation or 0.5)
+end
+
 env.info("[RedGCI] Mission-API loaded.")
