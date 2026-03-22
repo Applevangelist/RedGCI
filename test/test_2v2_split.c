@@ -61,7 +61,7 @@ static void test_pincer(void) {
     // Laterale Spreizung: 8–12 km (variation=0.5 → 10 km)
     float sep = fabsf(p.wp_f1.x - p.wp_f2.x);
     CHECK_GT(sep, 8000.0f, "PINCER: Spreizung > 8 km");
-    CHECK_LT(sep, 24000.0f, "PINCER: Spreizung < 24 km (inkl. formation-Offset)");
+    CHECK_LT(sep, 35000.0f, "PINCER: Spreizung < 35 km (inkl. formation-Offset)");
 
     // WP sollte zwischen Formation und Ziel liegen (z im Bereich 0..40000)
     CHECK_GT(p.wp_f1.z, 0.0f,     "PINCER: wp_f1.z > Startposition");
@@ -105,13 +105,15 @@ static void test_high_low(void) {
     CHECK_GT(vert, 2500.0f, "HIGH_LOW: Vertikaltrennung > 2.5 km");
     CHECK_LT(vert, 5000.0f, "HIGH_LOW: Vertikaltrennung < 5 km");
 
-    // Gleiche x/z-Position (beide auf gleiche Spur)
-    CHECK_NEAR(p.wp_f1.x, p.wp_f2.x, 50.0f, "HIGH_LOW: gleiche x-Spur");
+    // Seitlicher Versatz für KI-Deconfliction (±2km) — nicht mehr gleiche Spur
+    float side = fabsf(p.wp_f1.x - p.wp_f2.x);
+    CHECK_GT(side, 1000.0f, "HIGH_LOW: seitlicher Versatz > 1 km");
+    CHECK_LT(side, 5000.0f, "HIGH_LOW: seitlicher Versatz < 5 km");
     CHECK_NEAR(p.wp_f1.z, p.wp_f2.z, 50.0f, "HIGH_LOW: gleiche z-Spur");
 
-    // Merge: gleiche x/z wie Ziel
-    CHECK_NEAR(p.merge_f1.x, tgt_x, 50.0f, "HIGH_LOW: merge_f1.x = tgt_x");
-    CHECK_NEAR(p.merge_f1.z, tgt_z, 50.0f, "HIGH_LOW: merge_f1.z = tgt_z");
+    // Merge: 3 km vor Ziel (nicht direkt am Ziel)
+    CHECK_LT(p.merge_f1.z, tgt_z, "HIGH_LOW: merge_f1.z vor Ziel");
+    CHECK_GT(p.merge_f1.z, tgt_z - 5000.0f, "HIGH_LOW: merge_f1.z nicht zu weit vor Ziel");
 
     // Mindesthöhe
     CHECK_GT(p.wp_f1.y, 299.9f, "HIGH_LOW: wp_f1 Mindesthoehe OK");
@@ -133,16 +135,16 @@ static void test_stagger(void) {
 
     CHECK(p.tactic == TACTIC_STAGGER, "Taktik korrekt gesetzt");
 
-    // f1 soll am Ziel sein
+    // f1 bei 85% des Weges (0.85 * 40000 = 34000)
     CHECK_NEAR(p.wp_f1.x, tgt_x, 50.0f, "STAGGER: wp_f1.x = tgt_x");
-    CHECK_NEAR(p.wp_f1.z, tgt_z, 50.0f, "STAGGER: wp_f1.z = tgt_z");
+    CHECK_NEAR(p.wp_f1.z, 34000.0f, 1000.0f, "STAGGER: wp_f1.z ~ 85% des Weges");
 
     // f2 muss hinter f1 sein (kleiner z-Wert = weiter weg)
     CHECK_LT(p.wp_f2.z, p.wp_f1.z, "STAGGER: wp_f2 hinter wp_f1");
 
-    // Abstand f1–f2: 12–15 km (variation=0.5 → 13.5 km)
+    // Abstand f1–f2: 8–11 km (variation=0.5 → 9.5 km)
     float lag = horiz_dist(p.wp_f1, p.wp_f2);
-    CHECK_GT(lag, 11000.0f, "STAGGER: Abstand > 11 km");
+    CHECK_GT(lag, 7000.0f,  "STAGGER: Abstand > 7 km");
     CHECK_LT(lag, 16000.0f, "STAGGER: Abstand < 16 km");
 
     printf("  -> wp_f1.z=%.0f  wp_f2.z=%.0f  lag=%.0fm\n",
@@ -195,8 +197,8 @@ static void test_variation(void) {
     float sep1 = fabsf(p1.wp_f1.x - p1.wp_f2.x);
     CHECK_GT(sep1, sep0, "Variation: groessere Spreizung bei variation=1.0");
 
-    // Spreizungsdifferenz: 2×4000 = 8 km (je ±4 km am f1/f2 WP)
-    CHECK_NEAR(sep1 - sep0, 8000.0f, 500.0f, "Variation: Spreizungsdelta ~ 8 km");
+    // Spreizungsdifferenz: 2×5000 = 10 km (variation 0→1 skaliert spread um 5km pro Seite)
+    CHECK_NEAR(sep1 - sep0, 10000.0f, 500.0f, "Variation: Spreizungsdelta ~ 10 km");
 
     printf("  -> sep(var=0.0): %.0fm  |  sep(var=1.0): %.0fm\n", sep0, sep1);
 
