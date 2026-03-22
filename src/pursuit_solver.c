@@ -285,68 +285,88 @@ TacticSplitPlan gci_compute_split(
     switch (tactic) {
 
         // ── ZANGE: laterale Einhüllung ────────────────────────
+        //
+        //  WP liegt 45% des Weges (früher Split = mehr Flankenraum).
+        //  Spread 12–17 km (größer für sichtbaren Flankeneffekt).
+        //  Merge-Punkt 3 km vor Ziel auf jeweiliger Flanke —
+        //  Jäger konvergieren erst kurz vor dem Ziel.
         case TACTIC_PINCER: {
-            // Spreizung 8–12 km je nach Variation
-            float spread   = 8000.0f + variation * 4000.0f;
-            // WP liegt 65 % des Weges zwischen Formation und Ziel
-            float approach = rng * 0.65f;
-            float merge_off = spread * 0.20f;  // leichter Versatz am Merge
+            float spread    = 12000.0f + variation * 5000.0f;  // 12–17 km
+            float approach  = rng * 0.45f;                     // 45% — früh splitten
+            float merge_off = spread * 0.30f;                  // 30% Versatz am Merge
 
             plan.wp_f1.x = mid_x + ax * approach + px * spread;
             plan.wp_f1.z = mid_z + az * approach + pz * spread;
-            plan.wp_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            plan.wp_f1.y = tgt_y;
 
             plan.wp_f2.x = mid_x + ax * approach - px * spread;
             plan.wp_f2.z = mid_z + az * approach - pz * spread;
-            plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            plan.wp_f2.y = tgt_y;
 
-            // Merge: beide konvergieren auf Zielpunkt, leicht seitlich
-            plan.merge_f1.x = tgt_x + px * merge_off;
-            plan.merge_f1.z = tgt_z + pz * merge_off;
-            plan.merge_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            /* Merge 3 km vor Ziel, seitlich versetzt */
+            plan.merge_f1.x = tgt_x - ax * 3000.0f + px * merge_off;
+            plan.merge_f1.z = tgt_z - az * 3000.0f + pz * merge_off;
+            plan.merge_f1.y = tgt_y;
 
-            plan.merge_f2.x = tgt_x - px * merge_off;
-            plan.merge_f2.z = tgt_z - pz * merge_off;
-            plan.merge_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            plan.merge_f2.x = tgt_x - ax * 3000.0f - px * merge_off;
+            plan.merge_f2.z = tgt_z - az * 3000.0f - pz * merge_off;
+            plan.merge_f2.y = tgt_y;
             break;
         }
 
         // ── HOCH-TIEF: vertikale Trennung ─────────────────────
+        //
+        //  WP liegt 50% des Weges (früh genug für Höhenaufbau).
+        //  Leichter seitlicher Versatz (2 km) damit DCS KI nicht
+        //  identischen Kurs wählt.
+        //  f1 = tief (klassisch sowjetisch: Shootup, unter Ziel).
+        //  f2 = hoch (Shootdown, über Ziel).
+        //  Höhen neutral (0.0) — Lua addiert AltOffset pro Jäger.
         case TACTIC_HIGH_LOW: {
-            float vert     = 3000.0f + variation * 1000.0f;  // 3–4 km
-            float approach = rng * 0.70f;
+            float vert      = 3000.0f + variation * 1500.0f;  // 3–4.5 km
+            float approach  = rng * 0.50f;
+            float side_off  = 2000.0f;  /* lateraler Versatz für KI-Deconfliction */
 
-            // f1: tief (Shootup-Geometrie)
-            plan.wp_f1.x = mid_x + ax * approach;
-            plan.wp_f1.z = mid_z + az * approach;
-            plan.wp_f1.y = tgt_y - 400.0f;
+            /* f1: tief — unter Ziel, leicht links */
+            plan.wp_f1.x = mid_x + ax * approach + px * side_off;
+            plan.wp_f1.z = mid_z + az * approach + pz * side_off;
+            plan.wp_f1.y = tgt_y - 500.0f;
 
-            // f2: hoch (Shootdown-Geometrie)
-            plan.wp_f2.x = mid_x + ax * approach;
-            plan.wp_f2.z = mid_z + az * approach;
+            /* f2: hoch — über Ziel, leicht rechts */
+            plan.wp_f2.x = mid_x + ax * approach - px * side_off;
+            plan.wp_f2.z = mid_z + az * approach - pz * side_off;
             plan.wp_f2.y = tgt_y + vert;
 
-            // Merge: gleiche x/z wie Ziel, individuelle Höhen beibehalten
-            plan.merge_f1.x = plan.merge_f2.x = tgt_x;
-            plan.merge_f1.z = plan.merge_f2.z = tgt_z;
+            /* Merge 3 km vor Ziel, Höhen beibehalten */
+            plan.merge_f1.x = tgt_x - ax * 3000.0f + px * side_off;
+            plan.merge_f1.z = tgt_z - az * 3000.0f + pz * side_off;
             plan.merge_f1.y = plan.wp_f1.y;
+
+            plan.merge_f2.x = tgt_x - ax * 3000.0f - px * side_off;
+            plan.merge_f2.z = tgt_z - az * 3000.0f - pz * side_off;
             plan.merge_f2.y = plan.wp_f2.y;
             break;
         }
 
         // ── STAFFEL: BVR-Führung + BVR-Support ────────────────
+        //
+        //  f1 geht auf Intercept-Punkt (rng * 0.85 voraus statt
+        //  direkt auf Zielkoordinate — Ziel ist weitergeflogen).
+        //  f2 bleibt 8–11 km hinter f1 auf gleicher Spur —
+        //  genug für Folgeschuss ohne zu weit zurückzufallen.
         case TACTIC_STAGGER: {
-            float lag = 12000.0f + variation * 3000.0f;  // 12–15 km
+            float lag       = 8000.0f + variation * 3000.0f;   /* 8–11 km */
+            float lead_dist = rng * 0.85f;                      /* vor Ziel */
 
-            // f1: primärer Intercept (BVR-Führung)
-            plan.wp_f1.x = tgt_x;
-            plan.wp_f1.z = tgt_z;
-            plan.wp_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            /* f1: BVR-Führung auf prognostizierten Intercept */
+            plan.wp_f1.x = mid_x + ax * lead_dist;
+            plan.wp_f1.z = mid_z + az * lead_dist;
+            plan.wp_f1.y = tgt_y;
 
-            // f2: gestaffelt zurück (BVR-Support, Folgeschuss)
-            plan.wp_f2.x = tgt_x - ax * lag;
-            plan.wp_f2.z = tgt_z - az * lag;
-            plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            /* f2: gestaffelt zurück auf gleicher Spur */
+            plan.wp_f2.x = mid_x + ax * (lead_dist - lag);
+            plan.wp_f2.z = mid_z + az * (lead_dist - lag);
+            plan.wp_f2.y = tgt_y;
 
             plan.merge_f1 = plan.wp_f1;
             plan.merge_f2 = plan.wp_f2;
@@ -354,16 +374,22 @@ TacticSplitPlan gci_compute_split(
         }
 
         // ── TRAIL: enger Heckangriff ───────────────────────────
+        //
+        //  f1 auf Intercept (85% des Weges, nicht Zielkoordinate).
+        //  f2 direkt hinter f1 mit 3–5 km Abstand.
+        //  Kleiner seitlicher Versatz (500 m) für KI-Separation.
         case TACTIC_TRAIL: {
-            float lag = 3000.0f + variation * 2000.0f;  // 3–5 km
+            float lag       = 3000.0f + variation * 2000.0f;   /* 3–5 km */
+            float lead_dist = rng * 0.85f;
+            float side_off  = 500.0f;
 
-            plan.wp_f1.x = tgt_x;
-            plan.wp_f1.z = tgt_z;
-            plan.wp_f1.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            plan.wp_f1.x = mid_x + ax * lead_dist;
+            plan.wp_f1.z = mid_z + az * lead_dist;
+            plan.wp_f1.y = tgt_y;
 
-            plan.wp_f2.x = tgt_x - ax * lag;
-            plan.wp_f2.z = tgt_z - az * lag;
-            plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            plan.wp_f2.x = mid_x + ax * (lead_dist - lag) + px * side_off;
+            plan.wp_f2.z = mid_z + az * (lead_dist - lag) + pz * side_off;
+            plan.wp_f2.y = tgt_y;
 
             plan.merge_f1 = plan.wp_f1;
             plan.merge_f2 = plan.wp_f2;
@@ -374,7 +400,7 @@ TacticSplitPlan gci_compute_split(
         default: {
             plan.wp_f1.x = plan.wp_f2.x = tgt_x;
             plan.wp_f1.z = plan.wp_f2.z = tgt_z;
-            plan.wp_f1.y = plan.wp_f2.y = tgt_y + GCI_ALT_OFFSET_LOOKDOWN;
+            plan.wp_f1.y = plan.wp_f2.y = tgt_y;
             plan.merge_f1 = plan.wp_f1;
             plan.merge_f2 = plan.wp_f2;
             break;
